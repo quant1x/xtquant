@@ -45,7 +45,7 @@ setuptools.setup(
     version=app__version__,
     author=__author__,
     long_description=readme,
-    packages=setuptools.find_packages(include=[".*"]),
+    packages=setuptools.find_packages(include=["xtquant", "xtquant.*"]),
     include_package_data=True,
     install_requires=requirements,
     license="MIT license",
