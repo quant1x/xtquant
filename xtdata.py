@@ -1045,6 +1045,13 @@ def get_instrument_detail(stock_code, iscomplete = False):
             ret[field] = str(ret[field])
     convNum2Str('CreateDate')
     convNum2Str('OpenDate')
+
+    if ret.get('FloatVolume', None) is None:
+        ret['FloatVolume'] = inst.get('FloatVolumn')
+
+    if ret.get('TotalVolume', None) is None:
+        ret['TotalVolume'] = inst.get('TotalVolumn')
+
     return ret
 
 
