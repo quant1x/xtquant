@@ -24,19 +24,12 @@ class StockAccount(object):
         :param account_id: 资金账号
         """
         account_type = account_type.upper()
-        if(account_type == "STOCK"):
-            self.account_type = xtconstant.SECURITY_ACCOUNT
-        elif(account_type == "CREDIT"):
-            self.account_type = xtconstant.CREDIT_ACCOUNT
-        elif(account_type == "FUTURE"):
-            self.account_type = xtconstant.FUTURE_ACCOUNT
-        elif(account_type == "HUGANGTONG"):
-            self.account_type = xtconstant.HUGANGTONG_ACCOUNT
-        elif(account_type == "SHENGANGTONG"):
-            self.account_type = xtconstant.SHENGANGTONG_ACCOUNT
-        else:
-            self.account_type = xtconstant.SECURITY_ACCOUNT
-        self.account_id = account_id
+        for int_type, str_type in xtconstant.ACCOUNT_TYPE_DICT.items():
+            if account_type == str_type:
+                self.account_type = int_type
+                self.account_id = account_id
+                return
+        raise Exception("不支持的账号类型：{}！".format(account_type))
 
 
 class XtAsset(object):
@@ -144,17 +137,18 @@ class XtPosition(object):
     """
     def __init__(self, account_id, stock_code,
                  volume, can_use_volume, open_price, market_value,
-                 frozen_volume, on_road_volume, yesterday_volume):
+                 frozen_volume, on_road_volume, yesterday_volume, avg_price):
         """
         :param account_id: 资金账号
         :param stock_code: 证券代码, 例如"600000.SH"
         :param volume: 持仓数量,股票以'股'为单位, 债券以'张'为单位
         :param can_use_volume: 可用数量, 股票以'股'为单位, 债券以'张'为单位
-        :param open_price: 平均建仓成本
+        :param open_price: 开仓价
         :param market_value: 市值
         :param frozen_volume: 冻结数量
         :param on_road_volume: 在途股份
         :param yesterday_volume: 昨夜拥股
+        :param avg_price: 成本价
         """
         self.account_type = xtconstant.SECURITY_ACCOUNT
         self.account_id = account_id
@@ -166,6 +160,7 @@ class XtPosition(object):
         self.frozen_volume = frozen_volume
         self.on_road_volume = on_road_volume
         self.yesterday_volume = yesterday_volume
+        self.avg_price = avg_price
 
 
 class XtOrderError(object):
@@ -233,29 +228,6 @@ class XtOrderResponse(object):
         self.strategy_name = strategy_name
         self.order_remark = order_remark
         self.error_msg = error_msg
-        self.seq = seq
-
-class XtAppointmentResponse(object):
-    """
-    迅投异步约券接口对应的委托反馈 
-    """
-    def __init__(self, account_id, order_id, error_id, error_msg, seq):
-        """
-        :param account_id: 资金账号
-        :param order_sysid: 订单编号
-        :param error_id: 错误编号
-        :param error_msg: 错误信息
-        :param seq: 下单请求序号
-        """
-        if error_id == 0:
-            self.order_sysid = error_msg
-            self.error_msg = ''
-        else:
-            self.order_sysid = str(order_id)
-            self.error_msg = error_msg
-        
-        self.account_id = account_id
-        self.error_id = error_id
         self.seq = seq
 
 class XtCancelOrderResponse(object):

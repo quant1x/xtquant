@@ -24,6 +24,8 @@ class ContextInfo:
         this.start_time = ''
         this.end_time = ''
         this.dividend_type = ''
+        this.start_time_num = None
+        this.end_time_num = None
 
         #bar frame
         this.timelist = []
@@ -37,7 +39,7 @@ class ContextInfo:
         this.margin_ratio = 0.05  # 保证金比例
         this.slippage_type = 2  # 滑点类型
         this.slippage = 0.0  # 滑点值
-        this.max_vol_rate = 1.0  # 最大成交比例
+        this.max_vol_rate = 0.0  # 最大成交比例
         this.comsisson_type = 0  # 手续费类型
         this.open_tax = 0.0  # 买入印花税
         this.close_tax = 0.0  # 卖出印花税
@@ -56,6 +58,7 @@ class ContextInfo:
         this.link_fund_name = None
         this.data_info_level = None
         this.time_tick_size = None
+        this.subscribe_once = False
         return
 
     ### qmt strategy frame ###
@@ -124,7 +127,7 @@ class ContextInfo:
             period = this.period
         if not dividend_type or dividend_type == 'follow':
             dividend_type = this.dividend_type
-        return functions.subscribe_quote(stock_code, period, dividend_type, result_type, callback)
+        return functions.subscribe_quote(stock_code, period, dividend_type, 0, result_type, callback)
 
     def subscribe_whole_quote(this, code_list, callback = None):
         return functions.subscribe_whole_quote(code_list, callback)
@@ -167,6 +170,15 @@ class ContextInfo:
         if not dividend_type or dividend_type == 'follow':
             dividend_type = this.dividend_type
 
+        if not this.subscribe_once and subscribe:
+            this.subscribe_once = True
+            if period != "tick":
+                for stk in stock_code:
+                    functions.subscribe_quote(stk, period, dividend_type, -1)
+            else:
+                for stk in stock_code:
+                    this.subscribe_whole_quote(stk)
+
         return functions.get_market_data_ex(
             fields, stock_code, period
             , start_time, end_time, count
@@ -192,12 +204,53 @@ class ContextInfo:
     def get_raw_financial_data(this, field_list, stock_list, start_date, end_date, report_type = 'announce_time'):
         return functions.get_raw_financial_data(field_list, stock_list, start_date, end_date, report_type)
 
+    ### qmt functions - option ###
+
+    def get_option_detail_data(this, optioncode):
+        return functions.get_option_detail_data(optioncode)
+
+    def get_option_undl_data(this, undl_code_ref):
+        return functions.get_option_undl_data(undl_code_ref)
+
+    def get_option_list(this, undl_code,dedate,opttype = "",isavailavle = False):
+        return functions.get_option_list(undl_code, dedate, opttype, isavailavle)
+
+    def get_option_iv(this, opt_code):
+        return functions.get_opt_iv(opt_code, this.request_id)
+
+    def bsm_price(this, optType, targetPrice, strikePrice, riskFree, sigma, days, dividend = 0):
+        optionType = ""
+        if(optType.upper() == "C"):
+            optionType = "CALL"
+        if(optType.upper() == "P"):
+            optionType = "PUT"
+        if(type(targetPrice) == list):
+            result = []
+            for price in targetPrice:
+                bsmPrice= functions.calc_bsm_price(optionType,strikePrice,float(price),riskFree,sigma,days,dividend, this.request_id)
+                bsmPrice = round(bsmPrice,4)
+                result.append(bsmPrice)
+            return result
+        else:
+            bsmPrice = functions.calc_bsm_price(optionType,strikePrice,targetPrice,riskFree,sigma,days,dividend, this.request_id)
+            result = round(bsmPrice,4)
+            return result
+
+    def bsm_iv(this, optType, targetPrice, strikePrice, optionPrice, riskFree, days, dividend = 0):
+        if(optType.upper() == "C"):
+            optionType = "CALL"
+        if(optType.upper() == "P"):
+            optionType = "PUT"
+        result = functions.calc_bsm_iv(optionType, strikePrice, targetPrice, optionPrice, riskFree, days, dividend, this.request_id)
+        result = round(result,4)
+        return result
+
     ### qmt functions - static ###
 
-    def get_instrument_detail(this, stock_code = ''):
+    def get_instrument_detail(this, stock_code = '', iscomplete = False):
         if not stock_code:
             stock_code = this.stock_code
-        return functions.get_instrument_detail(stock_code)
+        return functions.get_instrument_detail(stock_code, iscomplete)
 
     get_instrumentdetail = get_instrument_detail # compat
 
@@ -215,6 +268,9 @@ class ContextInfo:
 
     def set_account(this, accountid):
         return functions.set_account(accountid, this.request_id)
+
+    def get_his_st_data(this, stock_code):
+        return functions.get_his_st_data(stock_code)
 
     ### private ###
 
@@ -243,3 +299,6 @@ class ContextInfo:
 
     def get_callback_cache(this, type):
         return functions._get_callback_cache_impl(type, this.request_id)
+
+    def get_ipo_info(this, start_time = '', end_time = ''):
+        return functions.get_ipo_info(start_time, end_time)

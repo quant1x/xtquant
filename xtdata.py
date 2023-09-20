@@ -1,17 +1,14 @@
-# coding=utf-8
-"""
-取行情、财务等数据的相关接口
-"""
+#coding:utf-8
 
 import os, sys
 import time
 import traceback
 import json
+import datetime as dt
 
 from . import xtbson as bson
-from . import xtdata_config
+from . import xtutil
 
-from .IPythonApiClient import IPythonApiClient as RPCClient
 
 __all__ = [
     'subscribe_quote'
@@ -47,6 +44,11 @@ __all__ = [
     #, 'download_history_contracts'
     , 'download_cb_data'
     , 'get_cb_info'
+    , 'create_sector_folder'
+    , 'create_sector'
+    , 'remove_stock_from_sector'
+    , 'reset_sector'
+    , 'get_period_list'
 ]
 
 def try_except(func):
@@ -62,121 +64,96 @@ def try_except(func):
                 exc_instance
             )
             # raise exc_type(message)
-            print(message)
+            # print(message)
             return None
 
     return wrapper
 
 
-CLIENT = None
+### config
 
-from os.path import abspath, dirname
-__curdir = dirname(abspath(__file__))
-
-__rpc_config = __curdir + '/xtdata.ini'
-__xtdata_config = __curdir + '/xtdata.ini'
-
-from .IPythonApiClient import rpc_init
-__rpc_init_status = rpc_init(__rpc_config)
-if __rpc_init_status < 0:
-    print(f'rpc初始化失败，配置文件：{__rpc_config}')
-
-def load_global_config():
-    res = {}
-
-    base_path = os.path.join(os.environ["USERPROFILE"], ".xtquant")
-    if xtdata_config.client_guid:
-        full_path = os.path.join(base_path, xtdata_config.client_guid)
-        if os.path.isfile(os.path.join(full_path, "xtdata.cfg")):
-            config = json.load(open(os.path.join(full_path, "xtdata.cfg"), "r", encoding = "utf-8"))
-            res[config.get('port', 58610)] = config
-    else:
-        for file in os.listdir(base_path):
-            full_path = os.path.join(base_path, file)
-
-            try:
-                os.remove(os.path.join(full_path, "running_status"))
-            except PermissionError:
-                if os.path.isfile(os.path.join(full_path, "xtdata.cfg")):
-                    config = json.load(open(os.path.join(full_path, "xtdata.cfg"), "r", encoding = "utf-8"))
-                    res[config.get('port', 58610)] = config
-            except Exception as e:
-                pass
-    return res
-
-def get_client():
-    global CLIENT
-    if not CLIENT:
-        CLIENT = RPCClient('client_xtdata', __xtdata_config)
-
-        try:
-            configs = load_global_config()
-            configs = sorted(configs.items(), key = lambda x:x[0])
-            for port, config in configs:
-                CLIENT.set_remote_addr('localhost', port)
-                CLIENT.reset()
-                succ, errmsg = CLIENT.connect_ex()
-                if succ:
-                    init_data_dir()
-                    break
-        except Exception as e:
-            pass
-
-        if not CLIENT.is_connected():
-            CLIENT.load_config(__xtdata_config)
-            CLIENT.reset()
-
-    if not CLIENT.is_connected():
-        succ, errmsg = CLIENT.connect_ex()
-        if succ:
-            init_data_dir()
-        else:
-            raise Exception("无法连接行情服务！")
-    return CLIENT
-
-def reconnect(ip = 'localhost', port = None):
-    global CLIENT
-    CLIENT = None
-    if not CLIENT:
-        if port == None:
-            CLIENT = get_client()
-        else:
-            CLIENT = RPCClient('client_xtdata', __xtdata_config)
-            CLIENT.set_remote_addr(ip, port)
-            CLIENT.reset()
-            succ, errmsg = CLIENT.connect_ex()
-            if succ:
-                init_data_dir()
-
-    if not CLIENT.is_connected():
-        succ, errmsg = CLIENT.connect_ex()
-        if succ:
-            init_data_dir()
-        else:
-            raise Exception("无法连接行情服务！")
-    return
+debug_mode = 0
 
 default_data_dir = '../userdata_mini/datadir'
 data_dir = default_data_dir
 
-def init_data_dir():
+
+### connection
+
+__client = None
+__client_last_spec = ('', None)
+
+
+def connect(ip = '', port = None, remember_if_success = True):
+    global __client
     global data_dir
 
-    try:
-        client = get_client()
-        data_dir = client.get_data_dir()
+    if __client:
+        if __client.is_connected():
+            return __client
 
-        if data_dir == "":
-            data_dir = os.path.join(client.get_app_dir(), default_data_dir)
+        __client.shutdown()
+        __client = None
+        data_dir = default_data_dir
 
-        if data_dir != default_data_dir:
-            data_dir = os.path.abspath(data_dir)
-    except Exception as e:
-        pass
+    from . import xtconn
 
-    return data_dir
+    if not ip:
+        ip = 'localhost'
 
-debug_mode = 0
+    if port:
+        server_list = [f'{ip}:{port}']
+        __client = xtconn.connect_any(server_list)
+    else:
+        server_list = xtconn.scan_available_server()
+
+        default_addr = 'localhost:58610'
+        if not default_addr in server_list:
+            server_list.append(default_addr)
+
+        __client = xtconn.connect_any(server_list)
+
+    if not __client or not __client.is_connected():
+        raise Exception("无法连接行情服务！")
+
+    if remember_if_success:
+        global __client_last_spec
+        __client_last_spec = (ip, port)
+
+    data_dir = __client.get_data_dir()
+    if data_dir == "":
+        data_dir = os.path.join(__client.get_app_dir(), default_data_dir)
+
+    data_dir = os.path.abspath(data_dir)
+    return __client
+
+
+def reconnect(ip = '', port = None, remember_if_success = True):
+    global __client
+    global data_dir
+
+    if __client:
+        __client.shutdown()
+        __client = None
+        data_dir = default_data_dir
+
+    return connect(ip, port, remember_if_success)
+
+
+def get_client():
+    global __client
+
+    if not __client or not __client.is_connected():
+        global __client_last_spec
+
+        ip, port = __client_last_spec
+        __client = connect(ip, port, False)
+
+    return __client
+
+
+
+### utils
 
 def create_array(shape, dtype_tuple, capsule, size):
     import numpy as np
@@ -196,6 +173,13 @@ def create_array(shape, dtype_tuple, capsule, size):
 
 from .IPythonApiClient import register_create_nparray
 register_create_nparray(create_array)
+
+
+def __bsoncall_common(interface, func, param):
+    return bson.BSON.decode(interface(func, bson.BSON.encode(param)))
+
+
+### function
 
 def get_industry(industry_name):
     '''
@@ -304,12 +288,12 @@ def get_financial_data(stock_list, table_list=[], start_time='', end_time='', re
 def get_market_data_ori(
     field_list = [], stock_list = [], period = '1d'
     , start_time = '', end_time = '', count = -1
-    , dividend_type = 'none', fill_data = True
+    , dividend_type = 'none', fill_data = True, enable_read_from_server = True
 ):
     client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d'}
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick'}
     global debug_mode
-    return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v2', enable_read_from_local, debug_mode)
+    return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v2', enable_read_from_local, enable_read_from_server, debug_mode)
 
 
 def get_market_data(
@@ -348,7 +332,10 @@ def get_market_data(
             "askVol1", "askVol2", "askVol3", "askVol4", "askVol5"           #卖一量~卖五量
             "bidVol1", "bidVol2", "bidVol3", "bidVol4", "bidVol5"           #买一量~买五量
     :param stock_list: 股票代码 "000001.SZ"
-    :param period: 周期 分笔"tick" 分钟线"1m"/"5m" 日线"1d"
+    :param period: 周期 分笔"tick" 分钟线"1m"/"5m"/"15m" 日线"1d"
+        Level2行情快照"l2quote" Level2行情快照补充"l2quoteaux" Level2逐笔委托"l2order" Level2逐笔成交"l2transaction" Level2大单统计"l2transactioncount" Level2委买委卖队列"l2orderqueue"
+        Level1逐笔成交统计一分钟“transactioncount1m” Level1逐笔成交统计日线“transactioncount1d”
+        期货仓单“warehousereceipt” 期货席位“futureholderrank” 互动问答“interactiveqa”
     :param start_time: 起始时间 "20200101" "20200101093000"
     :param end_time: 结束时间 "20201231" "20201231150000"
     :param count: 数量 -1全部/n: 从结束时间向前数n个
@@ -370,10 +357,15 @@ def get_market_data(
     if period in {'1m', '5m', '15m', '30m', '1h', '1d'}:
         import pandas as pd
         index, data = get_market_data_ori(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
+
         result = {}
         for field in data:
             result[field] = pd.DataFrame(data[field], index = index[0], columns = index[1])
         return result
+
+    if period in {'warehousereceipt', 'futureholderrank', 'interactiveqa'}:
+        data = get_bson_data(field_list, stock_list, period, start_time, end_time, count)
+        return data
 
     return get_market_data_ori(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
@@ -381,88 +373,141 @@ def get_market_data(
 def get_market_data_ex_ori(
     field_list = [], stock_list = [], period = '1d'
     , start_time = '', end_time = '', count = -1
-    , dividend_type = 'none', fill_data = True
+    , dividend_type = 'none', fill_data = True, enable_read_from_server = True
 ):
     client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d'}
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick'}
     global debug_mode
-    return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v3', enable_read_from_local, debug_mode)
+    return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v3', enable_read_from_local, enable_read_from_server, debug_mode)
 
+def convertTimetag(time, is_upper_bound):
+    try:
+        time1970 = dt.datetime(1970, 1, 1)
+
+        if len(time) == 8:
+            time_obj = dt.datetime.strptime(time, '%Y%m%d')
+        elif len(time) == 14:
+            time_obj = dt.datetime.strptime(time, '%Y%m%d%H%M%S')
+        else:
+            raise Exception()
+
+        result = int((time_obj - time1970).total_seconds() * 1000) - 28800000
+
+        if len(time) == 8 and is_upper_bound:
+            result = result + 86400000 - 1
+
+        return result
+
+    except Exception as e:
+        return None
+
+    return None
+
+def get_bson_data(
+    field_list, stock_list, period
+    , start_time, end_time, count
+):
+    client = get_client()
+    result = {}
+
+    if start_time == '':
+        start_time_num = -0x24BCAEE0800
+    else:
+        start_time_num = convertTimetag(start_time, False)
+    if end_time == '':
+        end_time_num = 0x1F3FFFFF830
+    else:
+        end_time_num = convertTimetag(end_time, True)
+
+    if start_time_num is None or end_time_num is None:
+        return result
+
+    period_dict = {
+        'warehousereceipt': {'time': 'G', 'warehouse': '1', 'receipt': '2'},
+        'futureholderrank': {'time': 'G', 'tradingVolumeRank': '1', 'buyPositionRank': '2', 'sellPositionRank': '3'},
+        'interactiveqa': {'time': 'G', 'id': '0', 'questionTime': '1', 'question': '2', 'answerTime': '3', 'answer': '4'}
+    }
+    field_list = field_list if field_list else list(period_dict[period].keys())
+
+    if period in period_dict:
+        field_dict = period_dict[period]
+    else:
+        return result
+
+    data = {
+        'stocklist': stock_list,
+        'period': period
+    }
+
+    result_bson = client.commonControl('getdatafilepath', bson.BSON.encode(data))
+    path_result = bson.BSON.decode(result_bson)
+    data_path_dict = path_result.get('result', {})
+
+    import pandas as pd
+
+    for stockcode in data_path_dict:
+        try:
+            bson_data = open(data_path_dict[stockcode], 'rb').read()
+            data_list = xtutil.read_from_bson_buffer(bson_data)
+
+            if len(data_list) == 0:
+                raise Exception()
+
+            time_index = []
+            cut_data_list = []
+            for bson_doc in data_list:
+                data_time = bson_doc.get('G', None)
+                if data_time == None:
+                    raise Exception()
+                if start_time_num <= data_time and data_time <= end_time_num:
+                    time_index.append(data_time)
+                    cut_data_list.append(bson_doc)
+
+            data_list = cut_data_list
+        except Exception as e:
+            result[stockcode] = pd.DataFrame()
+            continue
+
+        if count > 0:
+            cut_time_index = []
+            cut_data_list = []
+            index = max(len(data_list) - count, 0)
+            for i in range(index, len(data_list)):
+                cut_time_index.append(time_index[i])
+                cut_data_list.append(data_list[i])
+            time_index = cut_time_index
+            data_list = cut_data_list
+
+        stockcode_info = {}
+        for key in field_list:
+            name = field_dict.get(key, None)
+            if name is None:
+                continue
+
+            value = []
+            for bson_doc in data_list:
+                field_value = bson_doc.get(name, None)
+                value.append(field_value)
+
+            stockcode_info[key] = value
+
+        datetime_index = [timetag_to_datetime(t, '%Y%m%d') for t in time_index]
+        stockcode_info_df = pd.DataFrame(stockcode_info, index = datetime_index)
+        result[stockcode] = stockcode_info_df
+
+    return result
 
 def get_market_data_ex(
     field_list = [], stock_list = [], period = '1d'
     , start_time = '', end_time = '', count = -1
     , dividend_type = 'none', fill_data = True
 ):
-    '''
-    获取历史行情数据
-    :param field_list: 行情数据字段列表，[]为全部字段
-        K线可选字段：
-            "time"                #时间戳
-            "open"                #开盘价
-            "high"                #最高价
-            "low"                 #最低价
-            "close"               #收盘价
-            "volume"              #成交量
-            "amount"              #成交额
-            "settle"              #今结算
-            "openInterest"        #持仓量
-        分笔可选字段：
-            "time"                #时间戳
-            "lastPrice"           #最新价
-            "open"                #开盘价
-            "high"                #最高价
-            "low"                 #最低价
-            "lastClose"           #前收盘价
-            "amount"              #成交总额
-            "volume"              #成交总量
-            "pvolume"             #原始成交总量
-            "stockStatus"         #证券状态
-            "openInt"             #持仓量
-            "lastSettlementPrice" #前结算
-            "askPrice1", "askPrice2", "askPrice3", "askPrice4", "askPrice5" #卖一价~卖五价
-            "bidPrice1", "bidPrice2", "bidPrice3", "bidPrice4", "bidPrice5" #买一价~买五价
-            "askVol1", "askVol2", "askVol3", "askVol4", "askVol5"           #卖一量~卖五量
-            "bidVol1", "bidVol2", "bidVol3", "bidVol4", "bidVol5"           #买一量~买五量
-    :param stock_list: 股票代码 "000001.SZ"
-    :param period: 周期 分笔"tick" 分钟线"1m"/"5m" 日线"1d"
-    :param start_time: 起始时间 "20200101" "20200101093000"
-    :param end_time: 结束时间 "20201231" "20201231150000"
-    :param count: 数量 -1全部/n: 从结束时间向前数n个
-    :param dividend_type: 除权类型"none" "front" "back" "front_ratio" "back_ratio"
-    :param fill_data: 对齐时间戳时是否填充数据，仅对K线有效，分笔周期不对齐时间戳
-        为True时，以缺失数据的前一条数据填充
-            open、high、low、close 为前一条数据的close
-            amount、volume为0
-            settle、openInterest 和前一条数据相同
-        为False时，缺失数据所有字段填NaN
-    :return: 数据集，分笔数据和K线数据格式不同
-        period为'tick'时：{stock1 : value1, stock2 : value2, ...}
-            stock1, stock2, ... : 合约代码
-            value1, value2, ... : np.ndarray 数据列表，按time增序排列
-        period为其他K线周期时：{field1 : value1, field2 : value2, ...}
-            field1, field2, ... : 数据字段
-            value1, value2, ... : pd.DataFrame 字段对应的数据，各字段维度相同，index为stock_list，columns为time_list
-    '''
-
     if period in {'1m', '5m', '15m', '30m', '1h', '1d'}:
-        ifield = 'time'
-        query_field_list = field_list if (not field_list) or (ifield in field_list) else [ifield] + field_list
-        ori_data = _get_market_data_ex_ori_221207(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
+        return _get_market_data_ex_ori_221207(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
-        import pandas as pd
-        result = {}
-
-        if not ori_data:
-            return result
-        stime_fmt = '%Y%m%d' if period == '1d' else '%Y%m%d%H%M%S'
-        for s, data in ori_data.items():
-            cols = field_list if field_list else list(data.dtype.names)
-            sdata = pd.DataFrame(data, columns = cols)
-            sdata.index = [timetag_to_datetime(t, stime_fmt) for t in data['time']]
-            result[s] = sdata
-
-        return result
+    if period in {'warehousereceipt', 'futureholderrank', 'interactiveqa'}:
+        data = get_bson_data(field_list, stock_list, period, start_time, end_time, count)
+        return data
 
     import pandas as pd
     result = {}
@@ -471,6 +516,9 @@ def get_market_data_ex(
     query_field_list = field_list if (not field_list) or (ifield in field_list) else [ifield] + field_list
     ori_data = get_market_data_ex_ori(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
+    if not ori_data:
+        return result
+
     fl = field_list
     stime_fmt = '%Y%m%d' if period == '1d' else '%Y%m%d%H%M%S'
     if fl:
@@ -478,14 +526,12 @@ def get_market_data_ex(
         for s in ori_data:
             sdata = pd.DataFrame(ori_data[s], columns = fl2)
             sdata2 = sdata[fl]
-            sdata2.index = sdata[ifield]
-            sdata2.index.name = 'stime'
+            sdata2.index = [timetag_to_datetime(t, stime_fmt) for t in sdata[ifield]]
             result[s] = sdata2
     else:
         for s in ori_data:
             sdata = pd.DataFrame(ori_data[s])
             sdata.index = [timetag_to_datetime(t, stime_fmt) for t in sdata[ifield]]
-            sdata.index.name = 'stime'
             result[s] = sdata
 
     return result
@@ -494,57 +540,107 @@ def get_market_data_ex(
 def _get_market_data_ex_ori_221207(
     field_list = [], stock_list = [], period = '1d'
     , start_time = '', end_time = '', count = -1
-    , dividend_type = 'none', fill_data = True
+    , dividend_type = 'none', fill_data = True, enable_read_from_server = True
 ):
-    client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d'}
-    global debug_mode
-
-    fi, sdl = client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v4', enable_read_from_local, debug_mode)
-
     import numpy as np
-    return {s: np.frombuffer(b, fi) for s, b in sdl}
-
+    import pandas as pd
+    client = get_client()
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick'}
+    global debug_mode
+    ret = client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v4', enable_read_from_local,
+                                  enable_read_from_server, debug_mode)
+    result = {}
+    for stock, index, npdatas in ret:
+        data = {field: np.frombuffer(b, fi) for field, fi, b in npdatas}
+        result[stock] = pd.DataFrame(data=data, index=index)
+    return result
 
 def _get_market_data_ex_221207(
     field_list = [], stock_list = [], period = '1d'
     , start_time = '', end_time = '', count = -1
-    , dividend_type = 'none', fill_data = True
+    , dividend_type = 'none', fill_data = True, enable_read_from_server = True
 ):
     ifield = 'time'
     query_field_list = field_list if (not field_list) or (ifield in field_list) else [ifield] + field_list
 
     if period in {'1m', '5m', '15m', '30m', '1h', '1d'}:
-        ori_data = _get_market_data_ex_ori_221207(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
+        ori_data = _get_market_data_ex_ori_221207(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, enable_read_from_server)
     else:
-        ori_data = get_market_data_ex_ori(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
+        ori_data = get_market_data_ex_ori(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, enable_read_from_server)
 
     import pandas as pd
     result = {}
 
-    for s, data in ori_data.items():
-        cols = field_list if field_list else list(data.dtype.names)
-        sdata = pd.DataFrame(data, columns = cols)
-        sdata.index = pd.to_datetime((data['time'] + 28800000) * 1000000)
-        result[s] = sdata
+    fl = field_list
+
+    if fl:
+        fl2 = fl if ifield in fl else [ifield] + fl
+        for s in ori_data:
+            sdata = pd.DataFrame(ori_data[s], columns = fl2)
+            sdata2 = sdata[fl]
+            sdata2.index = pd.to_datetime((sdata[ifield] + 28800000) * 1000000)
+            result[s] = sdata2
+    else:
+        for s in ori_data:
+            sdata = pd.DataFrame(ori_data[s])
+            sdata.index = pd.to_datetime((sdata[ifield] + 28800000) * 1000000)
+            result[s] = sdata
 
     return result
 
 
 get_market_data3 = _get_market_data_ex_221207
 
+def get_data_dir():
+    client = get_client()
+    global data_dir
+    return data_dir
 
-def get_local_data(field_list=[], stock_code=[], period='1d', start_time='', end_time='', count=-1,
-                              dividend_type='none', fill_data=True, data_dir=data_dir):
-    return None
+def get_local_data(field_list=[], stock_list=[], period='1d', start_time='', end_time='', count=-1,
+                              dividend_type='none', fill_data=True, data_dir=None):
+    if data_dir == None:
+        data_dir = get_data_dir()
+
+    if period in {'1m', '5m', '15m', '30m', '1h', '1d'}:
+        return _get_market_data_ex_ori_221207(field_list, stock_list, period, start_time, end_time, count,
+                                              dividend_type, fill_data, False)
+
+    import pandas as pd
+    result = {}
+
+    ifield = 'time'
+    query_field_list = field_list if (not field_list) or (ifield in field_list) else [ifield] + field_list
+    ori_data = get_market_data_ex_ori(query_field_list, stock_list, period, start_time, end_time, count, dividend_type,
+                                      fill_data, False)
+
+    if not ori_data:
+        return result
+
+    fl = field_list
+    stime_fmt = '%Y%m%d' if period == '1d' else '%Y%m%d%H%M%S'
+    if fl:
+        fl2 = fl if ifield in fl else [ifield] + fl
+        for s in ori_data:
+            sdata = pd.DataFrame(ori_data[s], columns = fl2)
+            sdata2 = sdata[fl]
+            sdata2.index = [timetag_to_datetime(t, stime_fmt) for t in sdata[ifield]]
+            result[s] = sdata2
+    else:
+        for s in ori_data:
+            sdata = pd.DataFrame(ori_data[s])
+            sdata.index = [timetag_to_datetime(t, stime_fmt) for t in sdata[ifield]]
+            result[s] = sdata
+
+    return result
 
 
 def get_l2_quote(field_list=[], stock_code='', start_time='', end_time='', count=-1):
     '''
     level2实时行情
     '''
+    global debug_mode
     client = get_client()
-    datas = client.get_market_data3(field_list, [stock_code], 'l2quote', start_time, end_time, count, 'none', False, '', False, False)
+    datas = client.get_market_data3(field_list, [stock_code], 'l2quote', start_time, end_time, count, 'none', False, '', False, True, debug_mode)
     if datas:
         return datas[stock_code]
     return None
@@ -554,8 +650,9 @@ def get_l2_order(field_list=[], stock_code='', start_time='', end_time='', count
     '''
     level2逐笔委托
     '''
+    global debug_mode
     client = get_client()
-    datas = client.get_market_data3(field_list, [stock_code], 'l2order', start_time, end_time, count, 'none', False, '', False, False)
+    datas = client.get_market_data3(field_list, [stock_code], 'l2order', start_time, end_time, count, 'none', False, '', False, True, debug_mode)
     if datas:
         return datas[stock_code]
     return None
@@ -565,8 +662,9 @@ def get_l2_transaction(field_list=[], stock_code='', start_time='', end_time='',
     '''
     level2逐笔成交
     '''
+    global debug_mode
     client = get_client()
-    datas = client.get_market_data3(field_list, [stock_code], 'l2transaction', start_time, end_time, count, 'none', False, '', False, False)
+    datas = client.get_market_data3(field_list, [stock_code], 'l2transaction', start_time, end_time, count, 'none', False, '', False, True, debug_mode)
     if datas:
         return datas[stock_code]
     return None
@@ -643,7 +741,7 @@ def get_trading_dates(market, start_time='', end_time='', count=-1):
     '''
     client = get_client()
     datas = client.get_trading_dates_by_market(market, start_time, end_time, count)
-    return list(datas.values())
+    return datas
 
 
 def get_full_tick(code_list):
@@ -664,9 +762,10 @@ def subscribe_callback_wrapper(callback):
         try:
             if type(datas) == bytes:
                 datas = bson.BSON.decode(datas)
-            callback(datas)
+            if callback:
+                callback(datas)
         except:
-            print('subscribe_quote callback error:', callback)
+            print('subscribe callback error:', callback)
             traceback.print_exc()
     return subscribe_callback
 
@@ -745,6 +844,37 @@ def run():
             break
     return
 
+def create_sector_folder(parent_node,folder_name,overwrite = True):
+    '''
+    创建板块目录节点
+    :parent_node str: 父节点,''为'我的' （默认目录）
+    :sector_name str: 要创建的板块目录名称
+    :overwrite bool:是否覆盖 True为跳过，False为在folder_name后增加数字编号，编号为从1开始自增的第一个不重复的值
+    '''
+    client = get_client()
+    data = {}
+    data['parent'] = parent_node
+    data['foldername'] = folder_name
+    data['overwrite'] = overwrite
+    result_bson = client.commonControl('createsectorfolder', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
+
+def create_sector(parent_node,sector_name,overwrite = True):
+    '''
+    创建板块
+    :parent_node str: 父节点,''为'我的' （默认目录）
+    :sector_name str: 要创建的板块名
+    :overwrite bool:是否覆盖 True为跳过，False为在sector_name后增加数字编号，编号为从1开始自增的第一个不重复的值
+    '''
+    client = get_client()
+    data = {}
+    data['parent'] = parent_node
+    data['sectorname'] = sector_name
+    data['overwrite'] = overwrite
+    result_bson = client.commonControl('createsector', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
 
 def get_sector_list():
     '''
@@ -762,8 +892,26 @@ def add_sector(sector_name, stock_list):
     :param stock_list: (list)stock.market组成的股票代码列表
     '''
     client = get_client()
-    return client.add_sector(sector_name, stock_list, 1)
+    data = {}
+    data['sectorname'] = sector_name
+    data['stocklist'] = stock_list
+    result_bson = client.commonControl('addsector', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
 
+def remove_stock_from_sector(sector_name, stock_list):
+    '''
+    移除板块成分股
+    :param sector_name: 板块名称 e.g. "我的自选"
+    :stock_list: (list)stock.market组成的股票代码列表
+    '''
+    client = get_client()
+    data = {}
+    data['sectorname'] = sector_name
+    data['stocklist'] = stock_list
+    result_bson = client.commonControl('removestockfromsector', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
 
 def remove_sector(sector_name):
     '''
@@ -771,31 +919,94 @@ def remove_sector(sector_name):
     :param sector_name: 板块名称 e.g. "我的自选"
     '''
     client = get_client()
-    return client.add_sector(sector_name, [], -1)
+    data = {}
+    data['sectorname'] = sector_name
+    result_bson = client.commonControl('removesector', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
 
+def reset_sector(sector_name, stock_list):
+    '''
+    重置板块
+    :param sector_name: 板块名称 e.g. "我的自选"
+    :stock_list: (list)stock.market组成的股票代码列表
+    '''
+    client = get_client()
+    data = {}
+    data['sectorname'] = sector_name
+    data['stocklist'] = stock_list
+    result_bson = client.commonControl('resetsector', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+    return result.get('result')
 
-def get_instrument_detail(stock_code):
+def get_instrument_detail(stock_code, iscomplete = False):
     '''
     获取合约信息
     :param stock_code: 股票代码 e.g. "600000.SH"
     :return: dict
-        ExchangeID(str):合约市场代码, InstrumentID(str):合约代码, InstrumentName(str):合约名称, ProductID(str):合约的品种ID(期货), ProductName(str)合约的品种名称(期货),
-        CreateDate(int):上市日期(期货), OpenDate(int):IPO日期(股票), ExpireDate(int):退市日或者到期日, PreClose(double):前收盘价格, SettlementPrice(double):前结算价格,
-        UpStopPrice(double):当日涨停价, DownStopPrice(double):当日跌停价, FloatVolume(double):流通股本, TotalVolume(double):总股本, LongMarginRatio(double):多头保证金率,
-        ShortMarginRatio(double):空头保证金率, PriceTick(double):最小变价单位, VolumeMultiple(int):合约乘数(对期货以外的品种，默认是1),
-        MainContract(int):主力合约标记，1、2、3分别表示第一主力合约，第二主力合约，第三主力合约, LastVolume(int):昨日持仓量, InstrumentStatus(int):合约停牌状态,
-        IsTrading(bool):合约是否可交易, IsRecent(bool):是否是近月合约,
+        ExchangeID(str):合约市场代码
+        , InstrumentID(str):合约代码
+        , InstrumentName(str):合约名称
+        , ProductID(str):合约的品种ID(期货)
+        , ProductName(str):合约的品种名称(期货)
+        , ExchangeCode(str):交易所代码
+        , UniCode(str):统一规则代码
+        , CreateDate(int):上市日期(期货)
+        , OpenDate(int):IPO日期(股票)
+        , ExpireDate(int):退市日或者到期日
+        , PreClose(double):前收盘价格
+        , SettlementPrice(double):前结算价格
+        , UpStopPrice(double):当日涨停价
+        , DownStopPrice(double):当日跌停价
+        , FloatVolume(double):流通股本
+        , TotalVolume(double):总股本
+        , LongMarginRatio(double):多头保证金率
+        , ShortMarginRatio(double):空头保证金率
+        , PriceTick(double):最小变价单位
+        , VolumeMultiple(int):合约乘数(对期货以外的品种，默认是1)
+        , MainContract(int):主力合约标记
+        , LastVolume(int):昨日持仓量
+        , InstrumentStatus(int):合约停牌状态
+        , IsTrading(bool):合约是否可交易
+        , IsRecent(bool):是否是近月合约,
     '''
     client = get_client()
     inst = client.get_instrument_detail(stock_code)
     if not inst:
         return None
+
+    inst = xtutil.read_from_bson_buffer(inst)
+
+    if len(inst) == 1:
+        inst = inst[0]
+    else:
+        return None
+
+    if iscomplete:
+        def convNum2Str(field):
+            if field in inst and isinstance(inst[field], int):
+                inst[field] = str(inst[field])
+
+        convNum2Str('CreateDate')
+        convNum2Str('OpenDate')
+        convNum2Str('ExpireDate')
+
+        if 'ExtendInfo' in inst:
+            def convNum2Str(field):
+                if field in inst['ExtendInfo'] and isinstance(inst['ExtendInfo'][field], int):
+                    inst['ExtendInfo'][field] = str(inst['ExtendInfo'][field])
+
+            convNum2Str('EndDelivDate')
+        return inst
+
     field_list = [
             'ExchangeID'
             , 'InstrumentID'
             , 'InstrumentName'
             , 'ProductID'
             , 'ProductName'
+            , 'ExchangeCode'
+            , 'UniCode'
             , 'CreateDate'
             , 'OpenDate'
             , 'ExpireDate'
@@ -835,21 +1046,6 @@ def get_instrument_detail(stock_code):
     convNum2Str('CreateDate')
     convNum2Str('OpenDate')
     return ret
-
-
-def get_etf_info(stockCode):
-    '''
-    获取etf申赎清单
-    :param stockCode: ETF代码 e.g. "159811.SZ"
-    :return: dict
-        etfCode(str):ETF代码, etfExchID(str):ETF市场, prCode(str):基金申赎代码,
-        stocks(dict):成分股
-            key: 成分股代码 e.g. "000063.SZ"
-            value: dict
-                componentExchID(str):成份股市场代码, componentCode(str):成份股代码, componentName(str):成份股名称, componentVolume(int):成份股数量
-    '''
-    client = get_client()
-    return client.get_etf_info(stockCode)
 
 
 def download_index_weight():
@@ -1013,6 +1209,8 @@ def download_history_data(stock_code, period, start_time='', end_time=''):
     '''
     :param stock_code: 股票代码 e.g. "000001.SZ"
     :param period: 周期 分笔"tick" 分钟线"1m"/"5m" 日线"1d"
+        Level1逐笔成交统计一分钟“transactioncount1m” Level1逐笔成交统计日线“transactioncount1d”
+        期货仓单“warehousereceipt” 期货席位“futureholderrank” 互动问答“interactiveqa”
     :param start_time: 开始时间，格式YYYYMMDD/YYYYMMDDhhmmss/YYYYMMDDhhmmss.milli，e.g."20200427" "20200427093000" "20200427093000.000"
         若取某日全量历史数据，时间需要具体到秒，e.g."20200427093000"
     :param end_time: 结束时间 同上，若是未来某时刻会被视作当前时间
@@ -1122,14 +1320,25 @@ def download_financial_data2(stock_list, table_list=[], start_time='', end_time=
                 break
 
 
-def get_instrument_type(stock_code):
+def get_instrument_type(stock_code, variety_list = None):
     '''
     判断证券类型
     :param stock_code: 股票代码 e.g. "600000.SH"
     :return: dict{str : bool} {类型名：是否属于该类型}
     '''
     client = get_client()
-    return client.get_stock_type(stock_code)
+    v_dct = client.get_stock_type(stock_code)#默认处理得到全部品种的信息
+    if not v_dct:
+        return {}
+    v_dct1 = {}
+    if variety_list == None or len(variety_list) == 0:#返回该stock_code所有的品种的T/None(False)
+        v_dct1={k: v for k, v in v_dct.items() if v}
+        return v_dct1
+
+    for v in variety_list:
+        if v in v_dct:
+            v_dct1[v] = v_dct[v]
+    return v_dct1
 
 get_stock_type = get_instrument_type
 
@@ -1149,6 +1358,11 @@ def get_holidays():
     client = get_client()
     return [str(d) for d in client.get_holidays()]
 
+
+def get_market_last_trade_date(market):
+    client = get_client()
+    return client.get_market_last_trade_date(market)
+
 def get_trading_calendar(market, start_time = '', end_time = '', tradetimes = False):
     '''
     获取指定市场交易日历
@@ -1164,7 +1378,7 @@ def get_trading_calendar(market, start_time = '', end_time = '', tradetimes = Fa
     last = datetime.datetime(now.year + 1, 1, 1)
 
     client = get_client()
-    trading_list = list(client.get_trading_dates_by_market(market, start_time, end_time, -1).keys())
+    trading_list = [timetag_to_datetime(x, "%Y%m%d") for x in client.get_trading_dates_by_market(market, start_time, end_time, -1)]
 
     if start_time == '' and trading_list:
         start_time = trading_list[0]
@@ -1183,7 +1397,7 @@ def get_trading_calendar(market, start_time = '', end_time = '', tradetimes = Fa
         while now < end:
             now += datetime.timedelta(days=1)
             if datetime.datetime.isoweekday(now) not in [6, 7]:
-                ft = (now.strftime("%Y%m%d"))
+                ft = now.strftime("%Y%m%d")
                 if ft not in holidays_list:
                     ret_list.append(ft)
         return ret_list
@@ -1300,9 +1514,404 @@ def get_cb_info(stockcode):
     client = get_client()
     return client.get_cb_info(stockcode)
     
+def get_option_detail_data(optioncode):
+    client = get_client()
+    inst = client.get_instrument_detail(optioncode)
+    if not inst:
+        return None
+    
+    ret = {}
+    market = inst.get('ExchangeID')
+    if market == 'SHO' or market == "SZO" or (
+            (market == "CFFEX" or market == "IF") and inst.get('InstrumentID').find('-') >= 0):
+        field_list = [
+            'ExchangeID'
+            , 'InstrumentID'
+            , 'ProductID'
+            , 'OpenDate'
+            , 'CreateDate'
+            , 'ExpireDate'
+            , 'PreClose'
+            , 'SettlementPrice'
+            , 'UpStopPrice'
+            , 'DownStopPrice'
+            , 'LongMarginRatio'
+            , 'ShortMarginRatio'
+            , 'PriceTick'
+            , 'VolumeMultiple'
+            , 'MaxMarketOrderVolume'
+            , 'MinMarketOrderVolume'
+            , 'MaxLimitOrderVolume'
+            , 'MinLimitOrderVolume'
+        ]
+        ret = {}
+        for field in field_list:
+            ret[field] = inst.get(field)
+
+        exfield_list = [
+            'OptUnit'
+            , 'MarginUnit'
+            , 'OptUndlCode'
+            , 'OptUndlMarket'
+            , 'OptExercisePrice'
+            , 'NeeqExeType'
+            , 'OptUndlRiskFreeRate'
+            , 'OptUndlHistoryRate'
+            , 'EndDelivDate'
+        ]
+        inst_ex = inst.get('ExtendInfo', {})
+        for field in exfield_list:
+            ret[field] = inst_ex.get(field)
+
+        def convNum2Str(field):
+            if field in ret and isinstance(ret[field], int):
+                ret[field] = str(ret[field])
+
+        convNum2Str('ExpireDate')
+        convNum2Str('CreateDate')
+        convNum2Str('OpenDate')
+        convNum2Str('EndDelivDate')
+
+        ret["optType"] = ""
+
+        instrumentName = inst.get("InstrumentName")
+        if instrumentName.find('C') > 0 or instrumentName.find('购') > 0:
+            ret["optType"] = "CALL"
+        elif instrumentName.find('P') > 0 or instrumentName.find('沽') > 0:
+            ret["optType"] = "PUT"
+    return ret
+
+
+def get_option_undl_data(undl_code_ref):
+    def get_option_undl(opt_code):
+        inst = get_option_detail_data(opt_code)
+        if inst and 'OptUndlCode' in inst and 'OptUndlMarket' in inst:
+            return inst['OptUndlCode'] + '.' + inst['OptUndlMarket']
+        return ''
+
+    if undl_code_ref:
+        opt_list = []
+        if undl_code_ref.endswith('.SH'):
+            if undl_code_ref == "000016.SH" or undl_code_ref == "000300.SH" or undl_code_ref == "000852.SH" or undl_code_ref == "000905.SH":
+                opt_list = get_stock_list_in_sector('中金所')
+            else:
+                opt_list = get_stock_list_in_sector('上证期权')
+        if undl_code_ref.endswith('.SZ'):
+            opt_list = get_stock_list_in_sector('深证期权')
+        data = []
+        for opt_code in opt_list:
+            undl_code = get_option_undl(opt_code)
+            if undl_code == undl_code_ref:
+                data.append(opt_code)
+        return data
+    else:
+        opt_list = []
+        opt_list += get_stock_list_in_sector('上证期权')
+        opt_list += get_stock_list_in_sector('深证期权')
+        opt_list += get_stock_list_in_sector('中金所')
+        result = {}
+        for opt_code in opt_list:
+            undl_code = get_option_undl(opt_code)
+            if undl_code:
+                if undl_code in result:
+                    result[undl_code].append(opt_code)
+                else:
+                    result[undl_code] = [opt_code]
+        return result
+
+
+def get_option_list(undl_code, dedate, opttype = "", isavailavle = False):
+    result = []
+
+    marketcodeList = undl_code.split('.')
+    if (len(marketcodeList) != 2):
+        return []
+    undlCode = marketcodeList[0]
+    undlMarket = marketcodeList[1]
+    market = ""
+    if (undlMarket == "SH"):
+        if undlCode == "000016" or undlCode == "000300" or undlCode == "000852" or undlCode == "000905":
+            market = 'IF'
+        else:
+            market = "SHO"
+    elif (undlMarket == "SZ"):
+        market = "SZO"
+    if (opttype.upper() == "C"):
+        opttype = "CALL"
+    elif (opttype.upper() == "P"):
+        opttype = "PUT"
+    optList = []
+    if market == 'SHO':
+        optList += get_stock_list_in_sector('上证期权')
+        optList += get_stock_list_in_sector('过期上证期权')
+    elif market == 'SZO':
+        optList += get_stock_list_in_sector('深证期权')
+        optList += get_stock_list_in_sector('过期深证期权')
+    elif market == 'IF':
+        optList += get_stock_list_in_sector('中金所')
+        optList += get_stock_list_in_sector('过期中金所')
+    for opt in optList:
+        if (opt.find(market) < 0):
+            continue
+        inst = get_option_detail_data(opt)
+        if not inst:
+            continue
+        if (opttype.upper() != "" and opttype.upper() != inst["optType"]):
+            continue
+        if ((len(dedate) == 6 and inst['ExpireDate'].find(dedate) < 0)):
+            continue
+        if (len(dedate) == 8):  # option is trade,guosen demand
+            createDate = inst['CreateDate']
+            openDate = inst['OpenDate']
+            if (createDate > '0'):
+                openDate = min(openDate, createDate)
+            if (openDate < '20150101' or openDate > dedate):
+                continue
+            endDate = inst['ExpireDate']
+            if (isavailavle and endDate < dedate):
+                continue
+        if inst['OptUndlCode'].find(undlCode) >= 0:
+            result.append(opt)
+    return result
+
+
+def get_ipo_info(start_time = '', end_time = ''):
+    client = get_client()
+    data = client.get_ipo_info(start_time, end_time)
+    pylist = [
+        'securityCode'          #证券代码
+        , 'codeName'            #代码简称
+        , 'market'              #所属市场
+        , 'actIssueQty'         #发行总量  单位：股
+        , 'onlineIssueQty'      #网上发行量  单位：股
+        , 'onlineSubCode'       #申购代码
+        , 'onlineSubMaxQty'     #申购上限  单位：股
+        , 'publishPrice'        #发行价格
+        , 'startDate'           #申购开始日期
+        , 'onlineSubMinQty'     #最小申购数，单位：股
+        , 'isProfit'            #是否已盈利 0：上市时尚未盈利 1：上市时已盈利
+        , 'industryPe'          #行业市盈率
+        , 'beforePE'            #发行前市盈率
+        , 'afterPE'             #发行后市盈率
+        , 'listedDate'          #上市日期
+        , 'declareDate'         #中签号公布日期
+        , 'paymentDate'         #中签缴款日
+        , 'lwr'                 #中签率
+    ]
+    result = []
+    for datadict in data:
+        resdict = {}
+        for field in pylist:
+            resdict[field] = datadict.get(field)
+        result.append(resdict)
+    return result
+
+
+def get_markets():
+    return [
+        'SH', 'SZ', 'BJ', 'HK', 'HGT', 'SGT',
+        'IF', 'SF', 'DF', 'ZF', 'GF', 'INE',
+        'SHO', 'SZO',
+        'BKZS', 'WP'
+    ]
+
+def get_his_st_data(stock_code):
+    fileName = os.path.join(get_data_dir(), '..', 'data', 'SH_XXXXXX_2011_86400000.csv')
+
+    try:
+        with open(fileName, "r") as f:
+            datas = f.readlines()
+    except:
+        return {}
+
+    status = []
+    for data in datas:
+        cols = data.split(',')
+        if len(cols) >= 4 and cols[0] == stock_code:
+            status.append((cols[2], cols[3]))
+
+    if not status:
+        return {}
+
+    result = {}
+    i = 0
+    while i < len(status):
+        start = status[i][0]
+        flag = status[i][1]
+
+        i += 1
+
+        end = '20380119'
+        if i < len(status):
+            end = status[i][0]
+
+        realStatus = ''
+        if (flag == '1'):
+            realStatus = 'ST'
+        elif (flag == '2'):
+            realStatus = '*ST'
+        elif (flag == '3'):
+            realStatus = 'PT'
+        else:
+            continue
+
+        if realStatus not in result:
+            result[realStatus] = []
+        result[realStatus].append([start, end])
+
+    return result
+
+
+def set_instrument_detail(market, stock, stock_name, abbreviation, preclose):
+    data = [{"ExchangeID": market, "InstrumentID": stock, "InstrumentName": stock_name, "abbreviation": abbreviation, "PreClose": preclose}]
+    client = get_client()
+    client.custom_data_control("set_instrument_detail", bson.BSON.encode({"data": data}))
+
+def set_instrument_data2(instruments = []):
+    for inst in instruments:
+        if type(inst) != dict:
+            return "error"
+    client = get_client()
+    client.custom_data_control("set_instrument_detail", bson.BSON.encode({"data": instruments}))
+
+def create_formula(formula_name, stock_code, period, start_time = '', end_time = '', count = -1, dividend_type = 'none', extend_param = {}, callback = None):
+    cl = get_client()
+
+    result = bson.BSON.decode(cl.commonControl('createrequestid', bson.BSON.encode({})))
+    request_id = result['result']
+
+    data = {
+        'formulaname': formula_name, 'stockcode': stock_code, 'period': period
+        , 'starttime': start_time, 'endtime': end_time, 'count': count
+        , 'dividendtype': dividend_type, 'extendparam': extend_param
+        , 'create': True
+    }
+
+    if callback:
+        callback = subscribe_callback_wrapper(callback)
+
+    cl.subscribeFormula(request_id, bson.BSON.encode(data), callback)
+    return request_id
+
+def subscribe_formula(request_id, callback = None):
+    cl = get_client()
+
+    if callback:
+        callback = subscribe_callback_wrapper(callback)
+
+    cl.subscribeFormula(request_id, bson.BSON.encode({}), callback)
+    return
+
+def unsubscribe_formula(request_id):
+    cl = get_client()
+    cl.subscribeFormula(request_id)
+    return
+
+def call_formula(
+    formula_name, stock_code, period
+    , start_time = '', end_time = '', count = -1
+    , dividend_type = 'none', extend_param = {}
+):
+    cl = get_client()
+
+    result = bson.BSON.decode(cl.commonControl('createrequestid', bson.BSON.encode({})))
+    request_id = result['result']
+
+    data = {
+        'formulaname': formula_name, 'stockcode': stock_code, 'period': period
+        , 'starttime': start_time, 'endtime': end_time, 'count': count
+        , 'dividendtype': dividend_type, 'extendparam': extend_param
+        , 'create': True
+    }
+
+    data = cl.subscribeFormulaSync(request_id, bson.BSON.encode(data))
+    return bson.BSON.decode(data)
+
 gmd = get_market_data
 gmd2 = get_market_data_ex
 gmd3 = get_market_data3
 gld = get_local_data
 t2d = timetag_to_datetime
 gsl = get_stock_list_in_sector
+
+
+def reset_market_trading_day_list(market, datas):
+    cl = get_client()
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'createmarketchange'
+        , {
+            'market': market
+        }
+    )
+    cid = result['cid']
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'addtradingdaytochange'
+        , {
+            'cid': cid
+            , 'datas': datas
+            , 'coverall': True
+        }
+    )
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'finishmarketchange'
+        , {
+            'cid': cid
+            #, 'abort': False
+            , 'notifyupdate': True
+        }
+    )
+    return
+
+
+def reset_market_stock_list(market, datas):
+    cl = get_client()
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'createmarketchange'
+        , {
+            'market': market
+        }
+    )
+    cid = result['cid']
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'addstocktochange'
+        , {
+            'cid': cid
+            , 'datas': datas
+            , 'coverall': True
+        }
+    )
+
+    result = __bsoncall_common(
+        cl.custom_data_control, 'finishmarketchange'
+        , {
+            'cid': cid
+            #, 'abort': False
+            , 'notifyupdate': True
+        }
+    )
+    return
+
+
+def push_custom_data(meta, datas, coverall = False):
+    cl = get_client()
+    result = __bsoncall_common(
+        cl.custom_data_control, 'pushcustomdata'
+        , {
+            "meta": meta
+            , 'datas': datas
+            , 'coverall': coverall
+        }
+    )
+    return
+
+def get_period_list():
+    client = get_client()
+    result = bson.BSON.decode(client.commonControl('getperiodlist', bson.BSON.encode({})))
+    request_id = result['result']
+    return request_id
+

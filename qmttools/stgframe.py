@@ -5,6 +5,7 @@ from . import functions
 
 import os
 import uuid
+import datetime as dt
 
 from xtquant import xtdata
 from xtquant import xtbson as bson
@@ -24,9 +25,15 @@ class StrategyLoader:
         C.quote_mode = C._param.get('quote_mode', 'history') #'realtime' 'history' 'all'
         C.trade_mode = C._param.get('trade_mode', 'backtest') #'simulation' 'trading' 'backtest'
         C.title = C._param.get('title', '')
+        if not C.title:
+            C.title = os.path.basename(os.path.abspath(C.user_script).replace('.py', ''))
 
         C.stock_code = C._param.get('stock_code', '')
         C.period = C._param.get('period', '')
+        C.start_time = C._param.get('start_time', '')
+        C.end_time = C._param.get('end_time', '')
+        C.start_time_str = ''
+        C.end_time_str = ''
         if type(C.period) == int:
             C.period = {
                 0               :'tick'
@@ -49,6 +56,13 @@ class StrategyLoader:
         functions._request_id = C.request_id
         xtdata_config.client_guid = C._param.get('clientguid')
 
+        if C.start_time:
+            C.start_time_str = C.start_time.replace('-', '').replace(' ', '').replace(':', '')
+            C.start_time_num = int(functions.datetime_to_timetag(C.start_time_str))
+        if C.end_time:
+            C.end_time_str = C.end_time.replace('-', '').replace(' ', '').replace(':', '')
+            C.end_time_num = int(functions.datetime_to_timetag(C.end_time_str))
+
         if 1: #register
             this.create_formula()
 
@@ -60,14 +74,15 @@ class StrategyLoader:
                 C.stockcode = C.stock_code[0:pos]
                 C.market = C.stock_code[pos + 1:].upper()
 
-                if C.stockcode and C.market:
-                    C.stock_code = C.stockcode + '.' + C.market
+            if C.stockcode and C.market:
+                C.stock_code = C.stockcode + '.' + C.market
             C.period = C.period.lower()
+
+        if C.stockcode == "" or C.market == "":
+            raise Exception("股票代码为空")
 
         if 1: #create view
             if not C._param.get('requestid'):
-                if not C.title:
-                    C.title = os.path.basename(os.path.abspath(C.user_script).replace('.py',''))
                 this.create_view(C.title)
 
         if 1: #post initcomplete
@@ -86,12 +101,16 @@ class StrategyLoader:
             init_result['trade'] = {ar: C.__getattribute__(ar) for ar in trade_ar}
 
             backtest_ar = [
-                'asset', 'margin_ratio', 'slippage_type', 'slippage'
+                'start_time', 'end_time', 'asset', 'margin_ratio', 'slippage_type', 'slippage'
                 , 'max_vol_rate', 'comsisson_type', 'open_tax', 'close_tax'
                 , 'min_commission', 'open_commission', 'close_commission'
                 , 'close_today_commission', 'benchmark'
             ]
             init_result['backtest'] = {ar: C.__getattribute__(ar) for ar in backtest_ar}
+            if C.start_time:
+                init_result['backtest']['start_time'] = dt.datetime.fromtimestamp(C.start_time_num / 1000).strftime('%Y-%m-%d %H:%M:%S')
+            if C.end_time:
+                init_result['backtest']['end_time'] = dt.datetime.fromtimestamp(C.end_time_num / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
             this.call_formula('initcomplete', init_result)
 
@@ -175,7 +194,8 @@ class StrategyLoader:
 
             this.call_formula('runbar', {'timelist': [bartime]})
 
-            C.handlebar()
+            if (not C.start_time_num or C.start_time_num <= bartime) and (not C.end_time_num or bartime <= C.end_time_num):
+                C.handlebar()
             C.lastrunbarpos = i
 
         if 1:
@@ -186,12 +206,18 @@ class StrategyLoader:
             this.call_formula('index', push_result)
         return
 
-    def create_formula(this):
+    def create_formula(this, callback = None):
         C = this.C
         client = xtdata.get_client()
-        data = {'formulaname': C.guid}
-        client.createFormula(C.request_id, bson.BSON.encode(data))
-        return
+
+        data = {
+            'formulaname': '', 'stockcode': C.stock_code, 'period': C.period
+            , 'starttime': C.start_time_str, 'endtime': C.end_time_str, 'count': 1
+            , 'dividendtype': C.dividend_type, 'create': True, 'pyrunmode': 1
+            , 'title': C.title
+        }
+
+        client.subscribeFormula(C.request_id, bson.BSON.encode(data), callback)
 
     def call_formula(this, func, data):
         C = this.C
@@ -202,7 +228,7 @@ class StrategyLoader:
     def create_view(this, title):
         C = this.C
         client = xtdata.get_client()
-        data = {'viewtype': 0,'title':title, 'groupid':-1,'stockcode':C.market + C.stockcode,'period':C.period}
+        data = {'viewtype': 0,'title':title, 'groupid':-1,'stockcode':C.market + C.stockcode,'period':C.period,'dividendtype':C.dividend_type}
         client.createView(C.request_id, bson.BSON.encode(data))
         return
 

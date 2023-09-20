@@ -30,8 +30,8 @@ def timetag_to_datetime(timetag, format = ''):
         format = '%Y%m%d' if timetag % 86400000 == 57600000 else '%Y%m%d%H%M%S'
     return dt.datetime.fromtimestamp(timetag / 1000).strftime(format)
 
-def subscribe_quote(stock_code, period, dividend_type, result_type = '', callback = None):
-    return xtdata.subscribe_quote(stock_code, period, '', '', 0, callback)
+def subscribe_quote(stock_code, period, dividend_type, count = 0, result_type = '', callback = None):
+    return xtdata.subscribe_quote(stock_code, period, '', '', count, callback)
 
 def subscribe_whole_quote(code_list, callback = None):
     return xtdata.subscribe_whole_quote(code_list, callback)
@@ -187,7 +187,7 @@ def get_market_data_ex(
         , dividend_type = dividend_type, fill_data = fill_data
     )
     for stock in res:
-        res[stock]['stime'] = res[stock].index
+        res[stock].index.name = "stime"
     return res
 
 def get_full_tick(stock_code):
@@ -233,8 +233,8 @@ def get_raw_financial_data(field_list, stock_list, start_date, end_date, report_
 #def download_financial_data(stock_list, table_list): #暂不提供
 #    return xtdata.download_financial_data(stock_list, table_list)
 
-def get_instrument_detail(stock_code):
-    return xtdata.get_instrument_detail(stock_code)
+def get_instrument_detail(stock_code, iscomplete = False):
+    return xtdata.get_instrument_detail(stock_code, iscomplete)
 
 #def get_instrument_type(stock_code): #暂不提供
 #    return xtdata.get_instrument_type(stock_code)
@@ -257,6 +257,10 @@ def download_sector_data():
     return xtdata.download_sector_data()
 
 download_sector_weight = download_sector_data #compat
+
+def get_his_st_data(stock_code):
+    return xtdata.get_his_st_data(stock_code)
+
 
 def _passorder_impl(
     optype, ordertype, accountid, ordercode
@@ -368,3 +372,59 @@ def get_ordererror_callback_cache(data, C):
     data = C.get_callback_cache("ordererror")
     return
 
+def get_option_detail_data(stock_code):
+    return xtdata.get_option_detail_data(stock_code)
+
+def get_option_undl_data(undl_code_ref):
+    return xtdata.get_option_undl_data(undl_code_ref)
+
+def get_option_list(undl_code,dedate,opttype = "",isavailavle = False):
+    return xtdata.get_option_list(undl_code, dedate, opttype, isavailavle)
+
+def get_opt_iv(opt_code, requestid):
+    data = {}
+    data['code'] = opt_code
+
+    client = xtdata.get_client()
+    result_bson = client.callFormula(requestid, 'getoptiv', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+
+    out = result.get('result', 0)
+    return out
+
+def calc_bsm_price(optionType,strikePrice, targetPrice, riskFree, sigma, days, dividend, requestid):
+    data = {}
+    data['optiontype'] = optionType
+    data['strikeprice'] = strikePrice
+    data['targetprice'] = targetPrice
+    data['riskfree'] = riskFree
+    data['sigma'] = sigma
+    data['days'] = days
+    data['dividend'] = dividend
+
+    client = xtdata.get_client()
+    result_bson = client.callFormula(requestid, 'calcbsmprice', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+
+    out = result.get('result', 0)
+    return out
+
+def calc_bsm_iv(optionType, strikePrice, targetPrice, optionPrice, riskFree, days, dividend, requestid):
+    data = {}
+    data['optiontype'] = optionType
+    data['strikeprice'] = strikePrice
+    data['targetprice'] = targetPrice
+    data['optionprice'] = optionPrice
+    data['riskfree'] = riskFree
+    data['days'] = days
+    data['dividend'] = dividend
+
+    client = xtdata.get_client()
+    result_bson = client.callFormula(requestid, 'calcbsmiv', bson.BSON.encode(data))
+    result = bson.BSON.decode(result_bson)
+
+    out = result.get('result', 0)
+    return out
+
+def get_ipo_info(start_time, end_time):
+    return xtdata.get_ipo_info(start_time, end_time)
