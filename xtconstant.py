@@ -117,19 +117,19 @@ ORDER_TYPE_SET = {
 LATEST_PRICE = 5
 # 指定价/限价
 FIX_PRICE = 11
-# 上海最优五档即时成交剩余撤销
+# 最优五档即时成交剩余撤销[上交所][股票]
 MARKET_SH_CONVERT_5_CANCEL = 42
-# 上海最优五档即时成交剩余转限价
+# 最优五档即时成交剩转限价[上交所][股票]
 MARKET_SH_CONVERT_5_LIMIT = 43
-# 深圳对手方最优价格
+# 对手方最优价格委托[上交所[股票]][深交所[股票][期权]]
 MARKET_PEER_PRICE_FIRST = 44
-# 深圳本方最优价格
+# 本方最优价格委托[上交所[股票]][深交所[股票][期权]]
 MARKET_MINE_PRICE_FIRST = 45
-# 深圳即时成交剩余撤销
+# 即时成交剩余撤销委托[深交所][股票][期权]
 MARKET_SZ_INSTBUSI_RESTCANCEL = 46
-# 深圳最优五档即时成交剩余撤销
+# 最优五档即时成交剩余撤销[深交所][股票][期权]
 MARKET_SZ_CONVERT_5_CANCEL = 47
-# 深圳全额成交或撤销
+# 全额成交或撤销委托[深交所][股票][期权]
 MARKET_SZ_FULL_OR_CANCEL = 48
 
 

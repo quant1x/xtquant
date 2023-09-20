@@ -219,7 +219,7 @@ class XtOrderResponse(object):
     """
     迅投异步下单接口对应的委托反馈
     """
-    def __init__(self, account_id, order_id, strategy_name, order_remark, seq):
+    def __init__(self, account_id, order_id, strategy_name, order_remark, error_msg, seq):
         """
         :param account_id: 资金账号
         :param order_id: 订单编号
@@ -232,6 +232,7 @@ class XtOrderResponse(object):
         self.order_id = order_id
         self.strategy_name = strategy_name
         self.order_remark = order_remark
+        self.error_msg = error_msg
         self.seq = seq
 
 class XtAppointmentResponse(object):
