@@ -4,8 +4,6 @@
 import setuptools
 from git import Repo
 
-from qmt import __author__
-
 # try:
 #     from setuptools import find_packages, setup
 # except ImportError:
@@ -43,7 +41,7 @@ setuptools.setup(
     author_email="wangfengxy@sina.cn",
     url="https://gitee.com/quant1x/xtquant",
     version=app__version__,
-    author=__author__,
+    author='wangfeng',
     long_description=readme,
     packages=setuptools.find_packages(include=["xtquant", "xtquant.*"]),
     include_package_data=True,
