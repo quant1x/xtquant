@@ -234,6 +234,28 @@ class XtOrderResponse(object):
         self.order_remark = order_remark
         self.seq = seq
 
+class XtAppointmentResponse(object):
+    """
+    迅投异步约券接口对应的委托反馈 
+    """
+    def __init__(self, account_id, order_id, error_id, error_msg, seq):
+        """
+        :param account_id: 资金账号
+        :param order_sysid: 订单编号
+        :param error_id: 错误编号
+        :param error_msg: 错误信息
+        :param seq: 下单请求序号
+        """
+        if error_id == 0:
+            self.order_sysid = error_msg
+            self.error_msg = ''
+        else:
+            self.order_sysid = str(order_id)
+            self.error_msg = error_msg
+        
+        self.account_id = account_id
+        self.error_id = error_id
+        self.seq = seq
 
 class XtCancelOrderResponse(object):
     """

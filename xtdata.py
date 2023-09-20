@@ -177,7 +177,11 @@ def get_financial_data(stock_list, table_list=[], start_time='', end_time='', re
         'Balance' : 'ASHAREBALANCESHEET'
         , 'Income' : 'ASHAREINCOME'
         , 'CashFlow' : 'ASHARECASHFLOW'
-        #, 'Capital' : 'CAPITAL'
+        , 'Capital' : 'CAPITALSTRUCTURE'
+        , 'HolderNum' : 'SHAREHOLDER'
+        , 'Top10Holder' : 'TOP10HOLDER'
+        , 'Top10FlowHolder' : 'TOP10FLOWHOLDER'
+        , 'PreshareIndex' : 'PRESHAREINDEX'
     }
     
     if not table_list:
@@ -190,7 +194,7 @@ def get_financial_data(stock_list, table_list=[], start_time='', end_time='', re
         req_table = all_table_upper.get(table.upper(), table)
         req_list.append(req_table)
         names[req_table] = table
-        
+    
     data = {}
     sl_len = 20
     stock_list2 = [stock_list[i : i + sl_len] for i in range(0, len(stock_list), sl_len)]
@@ -279,7 +283,7 @@ def getMarketData(field_list, stock_list, period, start_time, end_time, count, d
     client = get_client()
     if period in {'tick'}:
         return client.get_market_data2(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
-    if period in {'1m', '5m', '1d'}:
+    if period in {'1m', '5m', '15m', '30m', '1h', '1d'}:
         import pandas as pd
         index, data = client.get_market_data2(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
         result = {}
@@ -698,6 +702,16 @@ def get_instrument_detail(stock_code):
     for field in field_list:
         ret[field] = inst.get(field)
     
+    exfield_list = [
+            'ProductTradeQuota'
+            , 'ContractTradeQuota'
+            , 'ProductOpenInterestQuota'
+            , 'ContractOpenInterestQuota'
+        ]
+    inst_ex = inst.get('ExtendInfo', {})
+    for field in exfield_list:
+        ret[field] = inst_ex.get(field)
+    
     def convNum2Str(field):
         if field in ret and isinstance(ret[field], int):
             ret[field] = str(ret[field])
@@ -943,41 +957,21 @@ def download_history_data2(stock_list, period, start_time='', end_time='', callb
     return
 
 
-def download_financial_data(stock_list, table_list=[]):
+def download_financial_data(stock_list, table_list=[], start_time='', end_time=''):
     '''
     :param stock_list: 股票代码列表
     :param table_list: 财务数据表名列表，[]为全部表
-        可选范围：['Balance','Income','CashFlow','PreshareIndex','Capital','Top10FlowHolder','Top10Holder','HolderNum']
+        可选范围：['Balance','Income','CashFlow','Capital','Top10FlowHolder','Top10Holder','HolderNum','PreshareIndex']
+    :param start_time: 开始时间，格式YYYYMMDD，e.g."20200427"
+    :param end_time: 结束时间 同上，若是未来某时刻会被视作当前时间
     '''
     client = get_client()
     if not table_list:
-        table_list = ['Balance','Income','CashFlow','PreshareIndex','Capital','Top10FlowHolder','Top10Holder','HolderNum']
-    table_list = [table.upper() for table in table_list]
-    
-    status = [False, 0, 1, '']
-    def on_progress(data):
-        try:
-            finished = data['finished']
-            total = data['total']
-            done = (finished >= total)
-            status[0] = done
-            status[1] = finished
-            status[2] = total
-            return done
-        except:
-            status[0] = True
-            status[3] = 'exception'
-            return True
-    
-    client.supply_finance_data(stock_list, table_list, on_progress)
-    
-    import time
-    while not status[0]:
-        time.sleep(0.1)
-        if not client.is_connected():
-            raise Exception('行情服务连接断开')
-            break
-    return
+        table_list = ['Balance','Income','CashFlow','Capital','Top10FlowHolder','Top10Holder','HolderNum','PreshareIndex']
+
+    for stock_code in stock_list:
+        for table in table_list:
+            client.supply_history_data(stock_code, table, start_time, end_time)
 
 
 def download_financial_data2(stock_list, table_list=[], start_time='', end_time='', callback=None):
@@ -990,39 +984,25 @@ def download_financial_data2(stock_list, table_list=[], start_time='', end_time=
     '''
     client = get_client()
     if not table_list:
-        table_list = ['Balance','Income','CashFlow','PreshareIndex','Capital','Top10FlowHolder','Top10Holder','HolderNum']
-    table_list = [table.upper() for table in table_list]
+        table_list = ['Balance','Income','CashFlow','Capital','Top10FlowHolder','Top10Holder','HolderNum','PreshareIndex']
     
-    status = [False, 0, 1, '']
-    def on_progress(data):
-        try:
-            finished = data['finished']
-            total = data['total']
-            done = (finished >= total)
-            status[0] = done
-            status[1] = finished
-            status[2] = total
+    data = {}
+    data['total'] = len(table_list) * len(stock_list)
+    finish = 0
+    for stock_code in stock_list:
+        for table in table_list:
+            client.supply_history_data(stock_code, table, start_time, end_time)
             
+            finish = finish + 1
             try:
+                data['finished'] = finish
                 callback(data)
             except:
                 pass
             
-            return done
-        except:
-            status[0] = True
-            status[3] = 'exception'
-            return True
-    
-    client.supply_finance_data_with_region(stock_list, table_list, start_time, end_time, on_progress)
-    
-    import time
-    while not status[0]:
-        time.sleep(0.1)
-        if not client.is_connected():
-            raise Exception('行情服务连接断开')
-            break
-    return
+            if not client.is_connected():
+                raise Exception('行情服务连接断开')
+                break
 
 
 def get_instrument_type(stock_code):
