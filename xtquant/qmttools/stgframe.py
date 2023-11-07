@@ -1,4 +1,5 @@
 #coding:utf-8
+import time
 
 from . import contextinfo
 from . import functions
@@ -132,6 +133,10 @@ class StrategyLoader:
 
         if C.quote_mode in ['realtime', 'all']:
             this.load_main_realtime()
+
+        if C.trade_mode == 'backtest':
+            time.sleep(0.4)
+            C.on_backtest_finished()
         return
 
     def stop(this):
