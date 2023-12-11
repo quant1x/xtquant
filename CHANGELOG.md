@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2023.12.12] - 2023-12-12
+### Changed
+- 回退到xtquant_230825b.
+- Merge branch '2023.x'.
+- 调整编译脚本.
+- 删除废弃的代码.
+- 删除废弃的资源文件.
+- 调整changelog文件名,删除废弃的资源文件.
+- 修订requirements.txt.
+
+## [2023.11.2] - 2023-11-08
+### Changed
+- 新增发布shell.
+
 ## [2023.11.1] - 2023-11-08
 ### Changed
 - 更新xtquant版本.
@@ -62,7 +76,9 @@ All notable changes to this project will be documented in this file.
 - Add LICENSE.
 - Initial commit.
 
-[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2023.11.1...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2023.12.12...HEAD
+[2023.12.12]: https://gitee.com/quant1x/xtquant/compare/v2023.11.2...v2023.12.12
+[2023.11.2]: https://gitee.com/quant1x/xtquant/compare/v2023.11.1...v2023.11.2
 [2023.11.1]: https://gitee.com/quant1x/xtquant/compare/v2023.9.22...v2023.11.1
 [2023.9.22]: https://gitee.com/quant1x/xtquant/compare/v2023.9.21...v2023.9.22
 [2023.9.21]: https://gitee.com/quant1x/xtquant/compare/v2023.9.10...v2023.9.21
