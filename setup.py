@@ -2,21 +2,15 @@
 # coding=utf-8
 """The setup script."""
 import setuptools
-from git import Repo
+from base1x.version import project_version
 
-# try:
-#     from setuptools import find_packages, setup
-# except ImportError:
-#     from distutils.core import find_packages, setup
+try:
+    from setuptools import find_packages, setup
+except ImportError:
+    from distutils.core import find_packages, setup
 
-repo = Repo(r'./')
-tags = []
-for __tag in repo.tags:
-    tag = str(__tag)
-    tag = tag[1:]
-    tags.append(tag)
-tags.sort(key=lambda x: tuple(int(v) for v in x.split('.')))
-latest = tags[-1]
+latest, author = project_version()
+__version__ = latest
 
 app__version__ = latest
 
@@ -26,10 +20,10 @@ def parse_requirements(filename):
     return [line for line in line_iter if line and not line.startswith("#")]
 
 
-with open("README.rst", encoding="utf-8") as readme_file:
+with open("README.md", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
-with open("HISTORY.rst", encoding="utf-8") as history_file:
+with open("CHANGELOG.md", encoding="utf-8") as history_file:
     history = history_file.read()
 
 requirements = parse_requirements("requirements.txt")
