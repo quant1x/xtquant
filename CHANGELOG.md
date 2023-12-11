@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2023.12.13] - 2023-12-12
+### Changed
+- 升级quant1x-base版本号到0.3.2.
+
 ## [2023.12.12] - 2023-12-12
 ### Changed
 - 回退到xtquant_230825b.
@@ -76,7 +80,8 @@ All notable changes to this project will be documented in this file.
 - Add LICENSE.
 - Initial commit.
 
-[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2023.12.12...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2023.12.13...HEAD
+[2023.12.13]: https://gitee.com/quant1x/xtquant/compare/v2023.12.12...v2023.12.13
 [2023.12.12]: https://gitee.com/quant1x/xtquant/compare/v2023.11.2...v2023.12.12
 [2023.11.2]: https://gitee.com/quant1x/xtquant/compare/v2023.11.1...v2023.11.2
 [2023.11.1]: https://gitee.com/quant1x/xtquant/compare/v2023.9.22...v2023.11.1
