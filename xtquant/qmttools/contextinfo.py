@@ -72,9 +72,6 @@ class ContextInfo:
     def handlebar(this):
         return
 
-    def on_backtest_finished(this):
-        return
-
     def stop(this):
         return
 
@@ -305,9 +302,3 @@ class ContextInfo:
 
     def get_ipo_info(this, start_time = '', end_time = ''):
         return functions.get_ipo_info(start_time, end_time)
-
-    def get_backtest_index(this, path):
-        functions.get_backtest_result(this.request_id, path)
-
-    def get_group_result(this, path, fields):
-        functions.get_group_result(this.request_id, path, fields)

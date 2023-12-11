@@ -1,7 +1,6 @@
 #coding:utf-8
 
 import datetime as dt
-import os
 import threading
 import time
 import traceback
@@ -429,23 +428,3 @@ def calc_bsm_iv(optionType, strikePrice, targetPrice, optionPrice, riskFree, day
 
 def get_ipo_info(start_time, end_time):
     return xtdata.get_ipo_info(start_time, end_time)
-
-def get_backtest_result(requestid, path):
-    path = os.path.abspath(path)
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok = True)
-
-    data = {'savePath': path}
-    client = xtdata.get_client()
-    bresult = client.callFormula(requestid, 'backtestresult', bson.BSON.encode(data))
-    return bson.BSON.decode(bresult)
-
-def get_group_result(requestid, path, fields):
-    path = os.path.abspath(path)
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok = True)
-
-    data = {'savePath': path, 'fields': fields}
-    client = xtdata.get_client()
-    bresult = client.callFormula(requestid, 'groupresult', bson.BSON.encode(data))
-    return bson.BSON.decode(bresult)

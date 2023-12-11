@@ -203,7 +203,7 @@ class XtQuantTrader(object):
         def on_push_CancelOrderStockAsyncResponse(seq, resp):
             callback = self.cbs.pop(seq, None)
             if callback:
-                resp = xttype.XtCancelOrderResponse(resp.m_strAccountID, resp.m_nCancelResult, resp.m_nOrderID, resp.m_strOrderSysID, seq, resp.m_strErrorMsg)
+                resp = xttype.XtCancelOrderResponse(resp.m_strAccountID, resp.m_nCancelResult, resp.m_nOrderID, resp.m_strOrderSysID, seq)
                 callback(resp)
                 
                 if not resp.order_sysid:
@@ -444,7 +444,7 @@ class XtQuantTrader(object):
         """
         :param account: 证券账号
         :param order_id: 委托编号, 报单时返回的编号
-        :return: 返回撤单成功或者失败, 0:成功,  -1:撤单失败
+        :return: 返回撤单成功或者失败, 0:成功,  -1:委托已完成撤单失败, -2:未找到对应委托编号撤单失败, -3:账号未登陆撤单失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type
@@ -462,7 +462,7 @@ class XtQuantTrader(object):
         """
         :param account: 证券账号
         :param order_id: 委托编号, 报单时返回的编号
-        :return: 返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示撤单失败
+        :return: 返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示委托失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type
@@ -499,7 +499,7 @@ class XtQuantTrader(object):
         :param account:证券账号
         :param market: 交易市场 0:上海 1:深圳
         :param sysid: 柜台编号
-        :return:返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示撤单失败
+        :return:返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示委托失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type

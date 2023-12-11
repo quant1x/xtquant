@@ -41,7 +41,6 @@ def run_file(user_script, param = {}):
     try_set_func(_C, 'init')
     try_set_func(_C, 'after_init')
     try_set_func(_C, 'handlebar')
-    try_set_func(_C, 'on_backtest_finished')
     try_set_func(_C, 'stop')
 
     try_set_func(_C, 'account_callback')
