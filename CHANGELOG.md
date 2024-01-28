@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2024.1.2] - 2024-01-29
+### Changed
+- 删除对GitPython的依赖.
+
 ## [2024.1.1] - 2024-01-28
 ### Changed
 - 更新官方版本20240119.
@@ -84,7 +88,8 @@ All notable changes to this project will be documented in this file.
 - Add LICENSE.
 - Initial commit.
 
-[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.1.1...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.1.2...HEAD
+[2024.1.2]: https://gitee.com/quant1x/xtquant/compare/v2024.1.1...v2024.1.2
 [2024.1.1]: https://gitee.com/quant1x/xtquant/compare/v2023.12.13...v2024.1.1
 [2023.12.13]: https://gitee.com/quant1x/xtquant/compare/v2023.12.12...v2023.12.13
 [2023.12.12]: https://gitee.com/quant1x/xtquant/compare/v2023.11.2...v2023.12.12
