@@ -1,35 +1,13 @@
 ﻿#coding:utf-8
 
-import os, sys
-#import traceback
+import os
 import json
-
+from .xtdatacenter import try_create_client
 
 ### config
-
-__curdir = os.path.dirname(os.path.abspath(__file__))
-
-__rpc_config_file = os.path.join(__curdir, 'xtdata.ini')
-
-from .IPythonApiClient import rpc_init
-__rpc_init_status = rpc_init(__rpc_config_file)
-
-if __rpc_init_status < 0:
-    raise Exception(f'rpc init failed, error_code:{__rpc_init_status}, config:{__rpc_config_file}')
-
+localhost = '127.0.0.1'
 
 ### function
-
-def try_create_client():
-    from .IPythonApiClient import IPythonApiClient as RPCClient
-
-    cl = RPCClient()
-    cl.init()
-
-    ec = cl.load_config(__rpc_config_file, 'client_xtdata')
-    if ec < 0:
-        raise f'load config failed, file:{__rpc_config_file}'
-    return cl
 
 
 def try_create_connection(addr):
@@ -38,7 +16,7 @@ def try_create_connection(addr):
     '''
     ip, port = addr.split(':')
     if not ip:
-        ip = 'localhost'
+        ip = localhost
     if not port:
         raise Exception('invalid port')
 
@@ -59,9 +37,17 @@ def create_connection(addr):
 
 
 def scan_available_server():
-    try:
-        result = []
+    result = []
 
+    try:
+        from .xtdatacenter import get_local_server_port
+        local_server_port = get_local_server_port()
+        if local_server_port:
+            result.append(f'127.0.0.1:{local_server_port}')
+    except:
+        pass
+
+    try:
         config_dir = os.path.abspath(os.path.join(os.environ['USERPROFILE'], '.xtquant'))
 
         for f in os.scandir(config_dir):
@@ -81,7 +67,7 @@ def scan_available_server():
             try:
                 config = json.load(open(os.path.join(full_path, 'xtdata.cfg'), 'r', encoding = 'utf-8'))
 
-                ip = config.get('ip', 'localhost')
+                ip = config.get('ip', localhost)
                 port = config.get('port', None)
                 if not port:
                     raise Exception(f'invalid port: {port}')
@@ -91,11 +77,11 @@ def scan_available_server():
             except Exception as e:
                 continue
 
-        result.sort()
-        return result
-
     except Exception as e:
-        return []
+        pass
+
+    result.sort()
+    return result
 
 
 def connect_any(addr_list):
@@ -112,7 +98,5 @@ def connect_any(addr_list):
             continue
 
     return None
-
-
 
 

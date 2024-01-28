@@ -97,6 +97,13 @@ class XtQuantTraderCallback(object):
         """
         pass
 
+    def on_smt_appointment_async_response(self, response):
+        """
+        :param response: XtSmtAppointmentResponse 对象
+        :return:
+        """
+        pass
+
 class XtQuantTrader(object):
     def __init__(self, path, session, callback=None):
         """
@@ -172,7 +179,9 @@ class XtQuantTrader(object):
         self.async_client.bindOnQueryIPODataCallback(on_common_resp_callback)
         self.async_client.bindOnTransferRespCallback(on_common_resp_callback)
         self.async_client.bindOnQueryComFundRespCallback(on_common_resp_callback)
-        self.async_client.bindOnQueryComPositionRespCallback(on_common_resp_callback)
+        self.async_client.bindOnSmtQueryQuoterRespCallback(on_common_resp_callback)
+        self.async_client.bindOnSmtQueryOrderRespCallback(on_common_resp_callback)
+        self.async_client.bindOnSmtQueryCompactRespCallback(on_common_resp_callback)
         
         self.async_client.bindOnQueryAccountInfosCallback(on_common_resp_callback)
         self.async_client.bindOnQueryAccountStatusCallback(on_common_resp_callback)
@@ -203,7 +212,7 @@ class XtQuantTrader(object):
         def on_push_CancelOrderStockAsyncResponse(seq, resp):
             callback = self.cbs.pop(seq, None)
             if callback:
-                resp = xttype.XtCancelOrderResponse(resp.m_strAccountID, resp.m_nCancelResult, resp.m_nOrderID, resp.m_strOrderSysID, seq)
+                resp = xttype.XtCancelOrderResponse(resp.m_strAccountID, resp.m_nCancelResult, resp.m_nOrderID, resp.m_strOrderSysID, seq, resp.m_strErrorMsg)
                 callback(resp)
                 
                 if not resp.order_sysid:
@@ -287,6 +296,16 @@ class XtQuantTrader(object):
 
         if enable_push:
             self.async_client.bindOnCancelErrorCallback(on_common_push_callback_wrapper(1, on_push_CancelError))
+        
+        def on_push_SmtAppointmentAsyncResponse(seq, resp):
+            callback = self.cbs.pop(seq, None)
+            if callback:
+                resp = xttype.XtSmtAppointmentResponse(seq, resp.m_bSuccess, resp.m_strMsg, resp.m_strApplyID)
+                callback(resp)
+            return
+        
+        if enable_push:
+            self.async_client.bindOnSmtAppointmentRespCallback(on_common_push_callback_wrapper(2, on_push_SmtAppointmentAsyncResponse))
         
     ########################
 
@@ -444,7 +463,7 @@ class XtQuantTrader(object):
         """
         :param account: 证券账号
         :param order_id: 委托编号, 报单时返回的编号
-        :return: 返回撤单成功或者失败, 0:成功,  -1:委托已完成撤单失败, -2:未找到对应委托编号撤单失败, -3:账号未登陆撤单失败
+        :return: 返回撤单成功或者失败, 0:成功,  -1:撤单失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type
@@ -462,7 +481,7 @@ class XtQuantTrader(object):
         """
         :param account: 证券账号
         :param order_id: 委托编号, 报单时返回的编号
-        :return: 返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示委托失败
+        :return: 返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示撤单失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type
@@ -499,7 +518,7 @@ class XtQuantTrader(object):
         :param account:证券账号
         :param market: 交易市场 0:上海 1:深圳
         :param sysid: 柜台编号
-        :return:返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示委托失败
+        :return:返回撤单请求序号, 成功委托后的撤单请求序号为大于0的正整数, 如果为-1表示撤单失败
         """
         req = XTQC.CancelOrderStockReq()
         req.m_nAccountType = account.account_type
@@ -1077,3 +1096,275 @@ class XtQuantTrader(object):
                 'prEnableVol': item.m_nPrEnableVol,
             })
         return result
+
+    def smt_query_quoter(self, account):
+        """
+        :param account: 证券账号
+        :return: 返回券源行情信息
+        """
+        req = XTQC.SmtQueryQuoterReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        
+        seq = self.async_client.nextSeq()
+        quoter_list = self.common_op_sync_with_seq(
+            seq,
+            (self.async_client.smtQueryQuoterWithSeq, seq, req)
+        )
+        result = list()
+        for item in quoter_list:
+            result.append(
+            {
+                'success': item.m_bSuccess,
+                'error': item.m_strMsg,
+                'finType': item.m_strFinType,
+                'stockType': item.m_strStockType,
+                'date': item.m_nDate,
+                'code': item.m_strCode,
+                'codeName': item.m_strCodeName,
+                'exchangeType': item.m_strExchangeType,
+                'fsmpOccupedRate': item.m_dFsmpOccupedRate,
+                'fineRate': item.m_dFineRate,
+                'fsmpreendRate': item.m_dFsmpreendRate,
+                'usedRate': item.m_dUsedRate,
+                'unUusedRate': item.m_dUnUusedRate,
+                'initDate': item.m_nInitDate,
+                'endDate': item.m_nEndDate,
+                'enableSloAmountT0': item.m_dEnableSloAmountT0,
+                'enableSloAmountT3': item.m_dEnableSloAmountT3,
+                'srcGroupId': item.m_strSrcGroupID,
+                'applyMode': item.m_strApplyMode,
+                'lowDate': item.m_nLowDate
+            })
+        return result
+
+    def smt_negotiate_order_async(self, account, src_group_id, order_code, date, amount, apply_rate, dict_param={}):
+        """
+        :param account: 证券账号
+        :param src_group_id: 来源组编号
+        :param order_code: 证券代码，如'600000.SH'
+        :param date: 期限天数
+        :param amount: 委托数量
+        :param apply_rate: 资券申请利率
+        :return: 返回约券请求序号, 成功请求后的序号为大于0的正整数, 如果为-1表示请求失败
+        注:
+        目前有如下参数通过一个可缺省的字典传递，键名与参数名称相同
+        subFareRate: 提前归还利率
+        fineRate: 罚息利率
+        """
+        req = XTQC.SmtNegotiateOrderReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        req.m_strSrcGroupID = src_group_id
+        req.m_strOrderCode = order_code
+        req.m_nDate = date
+        req.m_nAmount = amount
+        req.m_dApplyRate = apply_rate
+        
+        if 'subFareRate' in dict_param:
+            req.m_dSubFareRate = dict_param['subFareRate']
+        if 'fineRate' in dict_param:
+            req.m_dFineRate = dict_param['fineRate']
+        
+        seq = self.async_client.nextSeq()
+        self.cbs[seq] = self.callback.on_smt_appointment_async_response
+        self.async_client.smtNegotiateOrderWithSeq(seq, req)
+        return seq
+
+    def smt_appointment_order_async(self, account, order_code, date, amount, apply_rate):
+        """
+        :param account: 证券账号
+        :param order_code: 证券代码，如'600000.SH'
+        :param date: 期限天数
+        :param amount: 委托数量
+        :param apply_rate: 资券申请利率
+        :return: 返回约券请求序号, 成功请求后的序号为大于0的正整数, 如果为-1表示请求失败
+        """
+        req = XTQC.SmtAppointmentOrderReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        req.m_strOrderCode = order_code
+        req.m_nDate = date
+        req.m_nAmount = amount
+        req.m_dApplyRate = apply_rate
+        
+        seq = self.async_client.nextSeq()
+        self.cbs[seq] = self.callback.on_smt_appointment_async_response
+        self.async_client.smtAppointmentOrderWithSeq(seq, req)
+        return seq
+
+    def smt_appointment_cancel_async(self, account, apply_id):
+        """
+        :param account: 证券账号
+        :param apply_id: 资券申请编号
+        :return: 返回约券撤单请求序号, 成功请求后的序号为大于0的正整数, 如果为-1表示请求失败
+        """
+        req = XTQC.SmtAppointmentCancelReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        req.m_strApplyId = applyId
+        
+        seq = self.async_client.nextSeq()
+        self.cbs[seq] = self.callback.on_smt_appointment_async_response
+        self.async_client.smtAppointmentCancelWithSeq(seq, req)
+        return seq
+
+    def smt_query_order(self, account):
+        """
+        :param account: 证券账号
+        :return: 返回券源行情信息
+        """
+        req = XTQC.SmtQueryOrderReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        
+        seq = self.async_client.nextSeq()
+        order_list = self.common_op_sync_with_seq(
+            seq,
+            (self.async_client.smtQueryOrderWithSeq, seq, req)
+        )
+        result = list()
+        for item in order_list:
+            result.append(
+            {
+                'success': item.m_bSuccess,
+                'error': item.m_strMsg,
+                'initDate': item.m_nInitDate,
+                'currDate': item.m_nCurrDate,
+                'currTime': item.m_nCurrTime,
+                'applyId': item.m_strApplyID,
+                'srcGroupId': item.m_strSrcGroupID,
+                'cashcompactId': item.m_strCashcompactID,
+                'applyMode': item.m_strApplyMode,
+                'finType': item.m_strFinType,
+                'exchangeType': item.m_strExchangeType,
+                'code': item.m_strCode,
+                'codeName': item.m_strCodeName,
+                'date': item.m_nDate,
+                'applyRate': item.m_dApplyRate,
+                'entrustBalance': item.m_dEntrustBalance,
+                'entrustAmount': item.m_dEntrustAmount,
+                'businessBalance': item.m_dBusinessBalance,
+                'businessAmount': item.m_dBusinessAmount,
+                'validDate': item.m_nValidDate,
+                'dateClear': item.m_nDateClear,
+                'entrustNo': item.m_strEntrustNo,
+                'applyStatus': item.m_strApplyStatus,
+                'usedRate': item.m_dUsedRate,
+                'unUusedRate': item.m_dUnUusedRate,
+                'comGroupId': item.m_strComGroupID
+            })
+        return result
+
+    def smt_query_compact(self, account):
+        """
+        :param account: 证券账号
+        :return: 返回券源行情信息
+        """
+        req = XTQC.SmtQueryCompactReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        
+        seq = self.async_client.nextSeq()
+        compact_list = self.common_op_sync_with_seq(
+            seq,
+            (self.async_client.smtQueryCompactWithSeq, seq, req)
+        )
+        result = list()
+        for item in compact_list:
+            result.append(
+            {
+                'success': item.m_bSuccess,
+                'error': item.m_strMsg,
+                'createDate': item.m_nCreateDate,
+                'cashcompactId': item.m_strCashcompactID,
+                'oriCashcompactId': item.m_strOriCashcompactID,
+                'applyId': item.m_strApplyID,
+                'srcGroupId': item.m_strSrcGroupID,
+                'comGroupId': item.m_strComGroupID,
+                'finType': item.m_strFinType,
+                'exchangeType': item.m_strExchangeType,
+                'code': item.m_strCode,
+                'codeName': item.m_strCodeName,
+                'date': item.m_nDate,
+                'beginCompacAmount': item.m_dBeginCompacAmount,
+                'beginCompacBalance': item.m_dBeginCompacBalance,
+                'compacAmount': item.m_dCompacAmount,
+                'compacBalance': item.m_dCompacBalance,
+                'returnAmount': item.m_dReturnAmount,
+                'returnBalance': item.m_dReturnBalance,
+                'realBuyAmount': item.m_dRealBuyAmount,
+                'fsmpOccupedRate': item.m_dFsmpOccupedRate,
+                'compactInterest': item.m_dCompactInterest,
+                'compactFineInterest': item.m_dCompactFineInterest,
+                'repaidInterest': item.m_dRepaidInterest,
+                'repaidFineInterest': item.m_dRepaidFineInterest,
+                'fineRate': item.m_dFineRate,
+                'preendRate': item.m_dPreendRate,
+                'compactType': item.m_strCompactType,
+                'postponeTimes': item.m_nPostponeTimes,
+                'compactStatus': item.m_strCompactStatus,
+                'lastInterestDate': item.m_nLastInterestDate,
+                'interestEndDate': item.m_nInterestEndDate,
+                'validDate': item.m_nValidDate,
+                'dateClear': item.m_nDateClear,
+                'usedAmount': item.m_dUsedAmount,
+                'usedBalance': item.m_dUsedBalance,
+                'usedRate': item.m_dUsedRate,
+                'unUusedRate': item.m_dUnUusedRate,
+                'srcGroupName': item.m_strSrcGroupName,
+                'repaidDate': item.m_nRepaidDate,
+                'preOccupedInterest': item.m_dPreOccupedInterest,
+                'compactInterestx': item.m_dCompactInterestx,
+                'enPostponeAmount': item.m_dEnPostponeAmount,
+                'postponeStatus': item.m_strPostponeStatus,
+                'applyMode': item.m_strApplyMode
+            })
+        return result
+
+    def smt_compact_renewal_async(self, account, cash_compact_id, order_code, defer_days, defer_num, apply_rate):
+        """
+        :param account: 证券账号
+        :param cash_compact_id: 头寸合约编号
+        :param order_code: 证券代码，如'600000.SH'
+        :param defer_days: 申请展期天数
+        :param defer_num: 申请展期数量
+        :param apply_rate: 资券申请利率
+        :return: 返回约券展期请求序号, 成功请求后的序号为大于0的正整数, 如果为-1表示请求失败
+        """
+        req = XTQC.SmtCompactRenewalReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        req.m_strCompactId = cash_compact_id
+        req.m_strOrderCode = order_code
+        req.m_nDeferDays = defer_days
+        req.m_nDeferNum = defer_num
+        req.m_dApplyRate = apply_rate
+        
+        seq = self.async_client.nextSeq()
+        self.cbs[seq] = self.callback.on_smt_appointment_async_response
+        self.async_client.smtCompactRenewalWithSeq(seq, req)
+        return seq
+
+    def smt_compact_return_async(self, account, src_group_id, cash_compact_id, order_code, occur_amount):
+        """
+        :param account: 证券账号
+        :param src_group_id: 来源组编号
+        :param cash_compact_id: 头寸合约编号
+        :param order_code: 证券代码，如'600000.SH'
+        :param occur_amount: 发生数量
+        :return: 返回约券归还请求序号, 成功请求后的序号为大于0的正整数, 如果为-1表示请求失败
+        """
+        req = XTQC.SmtCompactReturnReq()
+        req.m_nAccountType = account.account_type
+        req.m_strAccountID = account.account_id
+        req.m_strSrcGroupId = src_group_id
+        req.m_strCompactId = cash_compact_id
+        req.m_strOrderCode = order_code
+        req.m_nOccurAmount = occur_amount
+        
+        seq = self.async_client.nextSeq()
+        self.cbs[seq] = self.callback.on_smt_appointment_async_response
+        self.async_client.smtCompactReturnWithSeq(seq, req)
+        return seq
+        

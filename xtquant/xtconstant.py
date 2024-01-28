@@ -132,6 +132,10 @@ COMPOSE_OPTION_RELEASE_COMB_STRATEGY = 139 # 解除组合策略
 # /*期货套利*/
 FUTURE_HEDGE = 400 # 期货套利
 
+# /*ETF申赎*/
+ETF_PURCHASE = 134 # 申购
+ETF_REDEMPTION = 135 # 赎回
+
 STOCK_BUY = 23
 STOCK_SELL = 24
 CREDIT_BUY = 23    #担保品买入
@@ -175,6 +179,20 @@ ORDER_TYPE_SET = {
 LATEST_PRICE = 5
 # 指定价/限价
 FIX_PRICE = 11
+# 市价最优价[郑商所][期货]
+MARKET_BEST = 18
+# 市价即成剩撤[大商所][期货]
+MARKET_CANCEL = 19
+# 市价全额成交或撤[大商所][期货]
+MARKET_CANCEL_ALL = 20
+# 市价最优一档即成剩撤[中金所][期货]
+MARKET_CANCEL_1 = 21
+# 市价最优五档即成剩撤[中金所][期货]
+MARKET_CANCEL_5 = 22
+# 市价最优一档即成剩转[中金所][期货]
+MARKET_CONVERT_1 = 23
+# 市价最优五档即成剩转[中金所][期货]
+MARKET_CONVERT_5 = 24
 # 最优五档即时成交剩余撤销[上交所][股票]
 MARKET_SH_CONVERT_5_CANCEL = 42
 # 最优五档即时成交剩转限价[上交所][股票]
@@ -1076,3 +1094,22 @@ TRANS_TRANSFER_SHARE = 0
 TRANS_TRANSFER_SPECIAL_POSITIONS = 1
 #融资融券账户客户划拨
 TRANS_TRANSFER_CREDIT_SHARE = 2
+
+"""
+多空方向，股票不需要
+"""
+#多
+DIRECTION_FLAG_LONG = 48
+#空
+DIRECTION_FLAG_SHORT = 49
+
+"""
+交易操作，用此字段区分股票买卖，期货开、平仓，期权买卖等
+"""
+OFFSET_FLAG_OPEN = 48
+OFFSET_FLAG_CLOSE = 49
+OFFSET_FLAG_FORCECLOSE = 50
+OFFSET_FLAG_CLOSETODAY = 51
+OFFSET_FLAG_ClOSEYESTERDAY = 52
+OFFSET_FLAG_FORCEOFF = 53
+OFFSET_FLAG_LOCALFORCECLOSE = 54

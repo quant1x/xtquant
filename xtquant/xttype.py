@@ -59,7 +59,7 @@ class XtOrder(object):
     def __init__(self, account_id, stock_code,
                  order_id, order_sysid, order_time, order_type, order_volume,
                  price_type, price, traded_volume, traded_price,
-                 order_status, status_msg, strategy_name, order_remark):
+                 order_status, status_msg, strategy_name, order_remark, direction, offset_flag):
         """
         :param account_id: 资金账号
         :param stock_code: 证券代码, 例如"600000.SH"
@@ -76,6 +76,8 @@ class XtOrder(object):
         :param status_msg: 委托状态描述, 如废单原因
         :param strategy_name: 策略名称
         :param order_remark: 委托备注
+        :param direction: 多空, 股票不需要
+        :param offset_flag: 交易操作，用此字段区分股票买卖，期货开、平仓，期权买卖等
         """
         self.account_type = xtconstant.SECURITY_ACCOUNT
         self.account_id = account_id
@@ -93,6 +95,8 @@ class XtOrder(object):
         self.status_msg = status_msg
         self.strategy_name = strategy_name
         self.order_remark = order_remark
+        self.direction = direction
+        self.offset_flag = offset_flag
 
 
 class XtTrade(object):
@@ -101,7 +105,7 @@ class XtTrade(object):
     """
     def __init__(self, account_id, stock_code,
                  order_type, traded_id, traded_time, traded_price, traded_volume, traded_amount,
-                 order_id, order_sysid, strategy_name, order_remark):
+                 order_id, order_sysid, strategy_name, order_remark, direction, offset_flag):
         """
         :param account_id: 资金账号
         :param stock_code: 证券代码, 例如"600000.SH"
@@ -115,6 +119,8 @@ class XtTrade(object):
         :param order_sysid: 柜台编号
         :param strategy_name: 策略名称
         :param order_remark: 委托备注
+        :param direction: 多空, 股票不需要
+        :param offset_flag: 交易操作，用此字段区分股票买卖，期货开、平仓，期权买卖等
         """
         self.account_type = xtconstant.SECURITY_ACCOUNT
         self.account_id = account_id
@@ -129,6 +135,8 @@ class XtTrade(object):
         self.order_sysid = order_sysid
         self.strategy_name = strategy_name
         self.order_remark = order_remark
+        self.direction = direction
+        self.offset_flag = offset_flag
 
 
 class XtPosition(object):
@@ -137,7 +145,7 @@ class XtPosition(object):
     """
     def __init__(self, account_id, stock_code,
                  volume, can_use_volume, open_price, market_value,
-                 frozen_volume, on_road_volume, yesterday_volume, avg_price):
+                 frozen_volume, on_road_volume, yesterday_volume, avg_price, direction):
         """
         :param account_id: 资金账号
         :param stock_code: 证券代码, 例如"600000.SH"
@@ -149,6 +157,7 @@ class XtPosition(object):
         :param on_road_volume: 在途股份
         :param yesterday_volume: 昨夜拥股
         :param avg_price: 成本价
+        :param direction: 多空, 股票不需要
         """
         self.account_type = xtconstant.SECURITY_ACCOUNT
         self.account_id = account_id
@@ -161,6 +170,7 @@ class XtPosition(object):
         self.on_road_volume = on_road_volume
         self.yesterday_volume = yesterday_volume
         self.avg_price = avg_price
+        self.direction = direction
 
 
 class XtOrderError(object):
@@ -234,13 +244,14 @@ class XtCancelOrderResponse(object):
     """
     迅投异步委托撤单请求返回结构
     """
-    def __init__(self, account_id, cancel_result, order_id, order_sysid, seq):
+    def __init__(self, account_id, cancel_result, order_id, order_sysid, seq, error_msg):
         """
         :param account_id: 资金账号
         :param cancel_result: 撤单结果
         :param order_id: 订单编号
         :param order_sysid: 柜台委托编号
         :param seq: 撤单请求序号
+        :param error_msg: 撤单反馈信息
         """
         self.account_type = xtconstant.SECURITY_ACCOUNT
         self.account_id = account_id
@@ -248,6 +259,7 @@ class XtCancelOrderResponse(object):
         self.order_id = order_id
         self.order_sysid = order_sysid
         self.seq = seq
+        self.error_msg = error_msg
 
 
 class XtCreditOrder(XtOrder):
@@ -331,3 +343,19 @@ class XtAccountStatus(object):
         self.account_type = account_type
         self.account_id = account_id
         self.status = status
+
+class XtSmtAppointmentResponse(object):
+    """
+    迅投约券相关异步接口的反馈
+    """
+    def __init__(self, seq, success, msg, apply_id):
+        """
+        :param seq: 异步请求序号
+        :param success: 申请是否成功
+        :param msg: 反馈信息
+        :param apply_id: 若申请成功返回资券申请编号
+        """
+        self.seq = seq
+        self.success = success
+        self.msg = msg
+        self.apply_id = apply_id
