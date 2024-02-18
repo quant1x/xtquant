@@ -1,6 +1,8 @@
 #coding:utf-8
 import time
 
+import pandas as pd
+
 from . import contextinfo
 from . import functions
 
@@ -236,4 +238,28 @@ class StrategyLoader:
         data = {'viewtype': 0,'title':title, 'groupid':-1,'stockcode':C.market + C.stockcode,'period':C.period,'dividendtype':C.dividend_type}
         client.createView(C.request_id, bson.BSON.encode(data))
         return
+
+
+class BackTestResult:
+    def __init__(self, request_id):
+        self.request_id = request_id
+
+    def get_backtest_index(self):
+        time.sleep(0.4)
+        functions.get_backtest_index(self.request_id, './tback')
+        return pd.read_csv('./tback/backtestindex.csv', encoding = 'utf-8')
+
+    def get_group_result(self, fields = []):
+        time.sleep(0.4)
+        functions.get_group_result(self.request_id, './tback', fields)
+        if not fields:
+            fields = ['deal', 'order', 'position']
+        res = {}
+        for f in fields:
+            res[f] = pd.read_csv(f'./tback/{f}.csv', encoding = 'utf-8')
+        return res
+
+class RealTimeResult:
+    def __init__(self, request_id):
+        self.request_id = request_id
 

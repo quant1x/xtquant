@@ -2027,6 +2027,174 @@
                 },
             },
         },
+    u"4020" : {
+        u"desc" : u"退市可转债信息", 
+        u"periods" : [86400000],
+        u"fields" : {
+            u"0" : {
+                u"desc" : u"可转债代码",
+                u"type" : u"string",
+                },
+            u"1" : {
+                u"desc" : u"可转债简称",
+                u"type" : u"string",
+                },
+            u"2" : {
+                u"desc" : u"正股代码",
+                u"type" : u"string",
+                },
+            u"3" : {
+                u"desc" : u"正股名称",
+                u"type" : u"string",
+                },
+            u"4" : {
+                u"desc" : u"上市首日收盘价",
+                u"type" : u"double",
+                },
+            u"5" : {
+                u"desc" : u"最后交易价格",
+                u"type" : u"double",
+                },
+            u"6" : {
+                u"desc" : u"最低收盘价",
+                u"type" : u"double",
+                },
+            u"7" : {
+                u"desc" : u"最高收盘价",
+                u"type" : u"double",
+                },
+            u"8" : {
+                u"desc" : u"发行规模(亿)",
+                u"type" : u"double",
+                },
+            u"9" : {
+                u"desc" : u"回售规模(亿)",
+                u"type" : u"double",
+                },
+            u"10" : {
+                u"desc" : u"剩余规模(亿)",
+                u"type" : u"double",
+                },
+            u"11" : {
+                u"desc" : u"发行日期",
+                u"type" : u"int",
+                },
+            u"12" : {
+                u"desc" : u"上市日期",
+                u"type" : u"int",
+                },
+            u"13" : {
+                u"desc" : u"最后交易日",
+                u"type" : u"int",
+                },
+            u"14" : {
+                u"desc" : u"到期日期",
+                u"type" : u"int",
+                },
+            u"15" : {
+                u"desc" : u"存续年限(年)",
+                u"type" : u"double",
+                },
+            u"16" : {
+                u"desc" : u"退市原因",
+                u"type" : u"string",
+                },
+            },
+        },
+    u"4021" : {
+        u"desc" : u"代发可转债信息", 
+        u"periods" : [86400000],
+        u"fields" : {
+            u"0" : {
+                u"desc" : u"正股代码",
+                u"type" : u"string",
+                },
+            u"1" : {
+                u"desc" : u"正股名称",
+                u"type" : u"string",
+                },
+            u"2" : {
+                u"desc" : u"可转债代码",
+                u"type" : u"string",
+                },
+            u"3" : {
+                u"desc" : u"可转债简称",
+                u"type" : u"string",
+                },
+            u"4" : {
+                u"desc" : u"方案进展",
+                u"type" : u"int",
+                },
+            u"5" : {
+                u"desc" : u"进展公告日",
+                u"type" : u"int",
+                },
+            u"6" : {
+                u"desc" : u"总发行规模(亿元)",
+                u"type" : u"double",
+                },
+            u"7" : {
+                u"desc" : u"评级",
+                u"type" : u"string",
+                },
+            u"8" : {
+                u"desc" : u"股东配售率(%)",
+                u"type" : u"double",
+                },
+            u"9" : {
+                u"desc" : u"转股价",
+                u"type" : u"double",
+                },
+            u"10" : {
+                u"desc" : u"正股每股净资产",
+                u"type" : u"double",
+                },
+            u"11" : {
+                u"desc" : u"每股配售(元)",
+                u"type" : u"double",
+                },
+            u"12" : {
+                u"desc" : u"股权登记日",
+                u"type" : u"int",
+                },
+            u"13" : {
+                u"desc" : u"网上发行规模(亿元)",
+                u"type" : u"double",
+                },
+            u"14" : {
+                u"desc" : u"中签率(%)",
+                u"type" : u"double",
+                },
+            u"15" : {
+                u"desc" : u"单账户中签(顶格)",
+                u"type" : u"double",
+                },
+            u"16" : {
+                u"desc" : u"申购户数(万户)",
+                u"type" : u"double",
+                },
+            u"17" : {
+                u"desc" : u"网下顶格(亿元)",
+                u"type" : u"double",
+                },
+            u"18" : {
+                u"desc" : u"顶格获配(万元)",
+                u"type" : u"double",
+                },
+            u"19" : {
+                u"desc" : u"网下户数(户)",
+                u"type" : u"double",
+                },
+            u"20" : {
+                u"desc" : u"包销比例(%)",
+                u"type" : u"double",
+                },
+            u"21" : {
+                u"desc" : u"网上申购代码",
+                u"type" : u"string",
+                },
+            },
+        },
     u"4999" : {
         u"desc" : u"除权除息(所有股票)",
         u"periods" : [86400000],

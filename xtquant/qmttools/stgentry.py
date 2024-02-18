@@ -60,7 +60,16 @@ def run_file(user_script, param = {}):
     loader.stop()
     loader.shutdown()
 
-    while True:
-        time.sleep(2)
+    mode = _C.trade_mode
+    if mode == 'backtest':
+        from .stgframe import BackTestResult
+        return BackTestResult(_C.request_id)
 
-    return
+    if mode in ['simulation', 'trading']:
+        while True:
+            time.sleep(2)
+        from .stgframe import Result
+        return Result(_C.request_id)
+
+    return None
+

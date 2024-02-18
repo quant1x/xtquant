@@ -37,7 +37,7 @@ __all__ = [
     , 'download_index_weight'
     , 'get_holidays'
     , 'get_trading_calendar'
-    , 'get_trade_times'
+    , 'get_trading_time'
     , 'get_etf_info'
     , 'download_etf_info'
     , 'get_main_contract'
@@ -591,6 +591,8 @@ __TUPLE_PERIODS = {
     , 'brokerqueue' : (1820,0)
     , 'brokerqueue2' : (1820,0)
     , 'brokerinfo' : (2038,86401000)
+    , 'delistchangebond' : (4020, 86401000)
+    , 'replacechangebond' : (4021, 86401000)
 }
 
 __STR_PERIODS = {
@@ -1204,6 +1206,11 @@ def get_instrument_detail(stock_code, iscomplete = False):
         return None
 
     if iscomplete:
+        if 'ExtendInfo' in inst:
+            for field in inst['ExtendInfo']:
+                inst[field] = inst['ExtendInfo'][field]
+            del inst['ExtendInfo']
+
         def convNum2Str(field):
             if field in inst and isinstance(inst[field], int):
                 inst[field] = str(inst[field])
@@ -1211,13 +1218,14 @@ def get_instrument_detail(stock_code, iscomplete = False):
         convNum2Str('CreateDate')
         convNum2Str('OpenDate')
         convNum2Str('ExpireDate')
+        convNum2Str('EndDelivDate')
 
-        if 'ExtendInfo' in inst:
-            def convNum2Str(field):
-                if field in inst['ExtendInfo'] and isinstance(inst['ExtendInfo'][field], int):
-                    inst['ExtendInfo'][field] = str(inst['ExtendInfo'][field])
+        if inst.get('FloatVolume', None) is None:
+            inst['FloatVolume'] = inst.get('FloatVolumn')
 
-            convNum2Str('EndDelivDate')
+        if inst.get('TotalVolume', None) is None:
+            inst['TotalVolume'] = inst.get('TotalVolumn')
+
         return inst
 
     field_list = [
@@ -1560,7 +1568,7 @@ def get_trading_calendar(market, start_time = '', end_time = ''):
     return [tt.strftime('%Y%m%d') for tt in tdl]
 
 
-def get_trade_times(stockcode):
+def get_trading_time(stockcode):
     '''
     返回指定股票的交易时段
     :param stockcode:  代码.市场  例如 '600000.SH'
@@ -2018,19 +2026,53 @@ def gen_factor_index(
     '''
     生成因子指数扩展数据
     '''
-    return __bsoncall_common(get_client().commonControl
-        , 'genfactorindex'
-        , {
-            'data_name': data_name
-            , 'formula_name': formula_name
-            , 'vars': vars
-            , 'sector_list': sector_list
-            , 'start_time': start_time
-            , 'end_time': end_time
-            , 'period': period
-            , 'dividend_type': dividend_type
-        }
+    running_info = {
+        'result':{}
+        ,'finished':0
+        ,'total':0
+    }
+    def onPushProgress(data):
+        running_info['finished'] = data.get('finished',-1)
+        if running_info['finished'] == -1:
+            running_info['result'] = data
+        else:
+            running_info['total'] = data.get('total', -1)
+
+    callback = subscribe_callback_wrapper(onPushProgress)
+
+    get_client().subscribeCommonControl(
+        'genfactorindex'
+        , bson.BSON.encode(
+            {
+                'data_name': data_name
+                , 'formula_name': formula_name
+                , 'vars': vars
+                , 'sector_list': sector_list
+                , 'start_time': start_time
+                , 'end_time': end_time
+                , 'period': period
+                , 'dividend_type': dividend_type
+            }
+        )
+        ,callback
     )
+
+    last_finished = running_info['finished']
+    time_count = 0
+    while not running_info['result']:
+        time.sleep(1)
+        if last_finished != running_info['finished']:
+            last_finished = running_info['finished']
+            time_count = 0
+        else:
+            time_count += 1
+            if time_count > 20:
+                time_count = 0
+                if get_client():
+                    print(f'因子指数扩展数据生成进度长时间未更新，'
+                          f'当前进度{running_info["finished"]}/{running_info["total"]}')
+
+    return running_info['result']
 
 
 def import_formula(formula_name, file_path):
@@ -2463,3 +2505,20 @@ def get_broker_queue_data(stock_list = [], start_time = '', end_time = '', count
         return _covert_hk_broke_data(ori_data)
     return ori_data
 
+
+def watch_xtquant_status(callback):
+    '''
+    监控xtquant连接状态变化
+
+    def callback(info):
+        #info: {peerAddress : 'ip:port', status: ''}
+        #status: 'connected', 'disconnected'
+        return
+    '''
+    cl = get_client()
+
+    if callback:
+        callback = subscribe_callback_wrapper(callback)
+
+    cl.subscribeCommonControl("watchxtquantstatus", bson.BSON.encode({}), callback)
+    return

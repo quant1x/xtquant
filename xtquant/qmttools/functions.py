@@ -430,7 +430,7 @@ def calc_bsm_iv(optionType, strikePrice, targetPrice, optionPrice, riskFree, day
 def get_ipo_info(start_time, end_time):
     return xtdata.get_ipo_info(start_time, end_time)
 
-def get_backtest_result(requestid, path):
+def get_backtest_index(requestid, path):
     path = os.path.abspath(path)
     if not os.path.exists(path):
         os.makedirs(path, exist_ok = True)
