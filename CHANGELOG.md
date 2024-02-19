@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2024.2.6] - 2024-02-19
+### Changed
+- 更新依赖库.
+
 ## [2024.2.5] - 2024-02-19
 ### Changed
 - 升级xtquant版本xtquant_240119b.
@@ -92,7 +96,8 @@ All notable changes to this project will be documented in this file.
 - Add LICENSE.
 - Initial commit.
 
-[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.2.5...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.2.6...HEAD
+[2024.2.6]: https://gitee.com/quant1x/xtquant/compare/v2024.2.5...v2024.2.6
 [2024.2.5]: https://gitee.com/quant1x/xtquant/compare/v2024.1.2...v2024.2.5
 [2024.1.2]: https://gitee.com/quant1x/xtquant/compare/v2024.1.1...v2024.1.2
 [2024.1.1]: https://gitee.com/quant1x/xtquant/compare/v2023.12.13...v2024.1.1
