@@ -263,8 +263,20 @@ class ContextInfo:
     def get_stock_list_in_sector(this, sector_name):
         return functions.get_stock_list_in_sector(sector_name)
 
-    def passorder(this, opType, orderType, accountid, orderCode, prType, modelprice, volume):
-        return functions._passorder_impl(opType, orderType, accountid, orderCode, prType, modelprice, volume, this.get_bar_timetag(), this.request_id)
+    def passorder(
+        this
+        , opType, orderType, accountid
+        , orderCode, prType, modelprice, volume
+        , strategyName, quickTrade, userOrderId
+    ):
+        return functions._passorder_impl(
+            opType, orderType, accountid
+            , orderCode, prType, modelprice, volume
+            , strategyName, quickTrade, userOrderId
+            , this.barpos, this.get_bar_timetag()
+            , "passorder", ""
+            , this.request_id
+        )
 
     def set_auto_trade_callback(this, enable):
         return functions._set_auto_trade_callback_impl(enable, this.request_id)

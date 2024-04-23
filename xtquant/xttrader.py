@@ -369,7 +369,7 @@ class XtQuantTrader(object):
     def run_forever(self):
         import time
         while True:
-            time.sleep(0.2)
+            time.sleep(2)
         return
 
     def set_relaxed_response_order_enabled(self, enabled):

@@ -56,7 +56,6 @@ class StrategyLoader:
             }.get(C.period, '')
         C.dividend_type = C._param.get('dividend_type', 'none')
 
-        functions._request_id = C.request_id
         xtdata_config.client_guid = C._param.get('clientguid')
 
         if C.start_time:
@@ -245,18 +244,24 @@ class BackTestResult:
         self.request_id = request_id
 
     def get_backtest_index(self):
-        time.sleep(0.4)
-        functions.get_backtest_index(self.request_id, './tback')
-        return pd.read_csv('./tback/backtestindex.csv', encoding = 'utf-8')
+        path = f'{os.getenv("TEMP")}/backtest_{uuid.uuid4()}'
+        functions.get_backtest_index(self.request_id, path)
+
+        ret = pd.read_csv(f'{path}/backtestindex.csv', encoding = 'utf-8')
+        import shutil
+        shutil.rmtree(f'{path}')
+        return ret
 
     def get_group_result(self, fields = []):
-        time.sleep(0.4)
-        functions.get_group_result(self.request_id, './tback', fields)
+        path = f'{os.getenv("TEMP")}/backtest_{uuid.uuid4()}'
+        functions.get_group_result(self.request_id, path, fields)
         if not fields:
-            fields = ['deal', 'order', 'position']
+            fields = ['order', 'deal', 'position']
         res = {}
         for f in fields:
-            res[f] = pd.read_csv(f'./tback/{f}.csv', encoding = 'utf-8')
+            res[f] = pd.read_csv(f'{path}/{f}.csv', encoding = 'utf-8')
+        import shutil
+        shutil.rmtree(path)
         return res
 
 class RealTimeResult:

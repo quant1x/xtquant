@@ -27,8 +27,7 @@ __rpc_init_status = __dc.rpc_init(__rpc_config_dir)
 if __rpc_init_status < 0:
     raise Exception(f'rpc init failed, error_code:{__rpc_init_status}, configdir:{__rpc_config_dir}')
 
-__dc.set_config_dir(os.path.join(__curdir, 'config'))
-
+__config_dir = os.path.join(__curdir, 'config')
 __data_home_dir = 'data'
 
 __quote_token = ''
@@ -76,6 +75,16 @@ def set_data_home_dir(data_home_dir):
     return
 
 
+def set_config_dir(config_dir):
+    '''
+    设置配置文件目录，此接口应该先于init_quote调用
+    通常情况配置文件内置，不需要调用这个接口
+    '''
+    global __config_dir
+    __config_dir = config_dir
+    return
+
+
 def set_kline_mirror_enabled(enable):
     '''
     设置K线全推功能是否开启，此接口应该先于init_quote调用
@@ -101,6 +110,7 @@ def init(start_local_service = True):
     start_local_service: bool
         如果start_local_service为True，会额外启动一个默认本地监听，以支持datacenter作为独立行情服务时的xtdata内置连接
     '''
+    __dc.set_config_dir(__config_dir)
     __dc.set_data_home_dir(__data_home_dir)
     __dc.set_token(__quote_token)
     __dc.start_init_quote()

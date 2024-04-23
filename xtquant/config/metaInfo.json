@@ -2013,6 +2013,76 @@
                 },
             },
         },
+    u"4011" : {
+        u"desc" : u"etfiopv",
+        u"periods" : [60000, 86400000],
+        u"fields" : {
+            u"0" : {
+                u"desc" : u"开盘价",
+                u"type" : u"double",
+                },
+            u"1" : {
+                u"desc" : u"最高价",
+                u"type" : u"double",
+                },
+            u"2" : {
+                u"desc" : u"最低价",
+                u"type" : u"double",
+                },
+            u"3" : {
+                u"desc" : u"收盘价",
+                u"type" : u"double",
+                },
+            u"4" : {
+                u"desc" : u"前收盘价",
+                u"type" : u"double",
+                },
+            u"5" : {
+                u"desc" : u"成交量",
+                u"type" : u"long",
+                },
+            u"6" : {
+                u"desc" : u"成交额",
+                u"type" : u"double",
+                },
+            u"7" : {
+                u"desc" : u"持仓量",
+                u"type" : u"int",
+                },
+            u"8" : {
+                u"desc" : u"流通盘",
+                u"type" : u"long",
+                },
+            u"9" : {
+                u"desc" : u"总股本",
+                u"type" : u"long",
+                },
+            u"a" : {
+                u"desc" : u"当日除权系数",
+                u"type" : u"double",
+                },
+            u"b" : {
+                u"desc" : u"总的除权系数",
+                u"type" : u"double",
+                },
+            u"c" : {
+                u"desc" : u"停牌标志",
+                u"type" : u"int",
+                },
+            u"d" : {
+                u"desc" : u"今结算",
+                u"type" : u"double",
+                },
+            u"e" : {
+                u"desc" : u"涨停价",
+                u"type" : u"double",
+                },
+            u"f" : {
+                u"desc" : u"跌停价",
+                u"type" : u"double",
+                },
+            },
+        },
     u"4015" : {
         u"desc" : u"期货仓单",			 
         u"periods" : [86400000],
@@ -2526,6 +2596,10 @@
                 u"desc" : u"合约在交易所的代码", 
                 u"type" : u"string",
                 },   
+            u"150" : {
+                u"desc" : u"期货统一规则代码", 
+                u"type" : u"string",
+                },   
             u"S" : {
                 u"desc" : u"主力合约代码",
                 u"type" : u"string",
@@ -2786,6 +2860,60 @@
             u"6" : {
                 u"desc" : u"级别",
                 u"type" : u"int",
+                },
+            },
+        },
+        u"9502" : {
+        u"desc" : u"期权数据",
+        u"periods" : [86400000],
+        u"fields" : {
+            u"0" : {
+                u"desc" : u"期权编码",
+                u"type" : u"string",
+                },
+            u"1" : {
+                u"desc" : u"期权市场",
+                u"type" : u"string",
+                },
+            u"2" : {
+                u"desc" : u"标的编码",
+                u"type" : u"string",
+                },
+            u"3" : {
+                u"desc" : u"标的市场",
+                u"type" : u"string",
+                },
+            u"4" : {
+                u"desc" : u"行权价",
+                u"type" : u"double",
+                },
+            u"5" : {
+                u"desc" : u"方向",
+                u"type" : u"string",
+                },
+            u"6" : {
+                u"desc" : u"到期月",
+                u"type" : u"int",
+                },
+            u"7" : {
+                u"desc" : u"到期日",
+                u"type" : u"int",
+                },
+            u"8" : {
+                u"desc" : u"合约类型",
+                u"type" : u"int",
+                },
+            u"9" : {
+                u"desc" : u"上市日",
+                u"type" : u"int",
+                },
+            u"10" : {
+                u"desc" : u"调整",
+                u"type" : u"int",
+                },
+            u"11" : {
+                u"desc" : u"期权名称",
+                u"type" : u"string",
                 },
             },
         },
