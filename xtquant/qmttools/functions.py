@@ -9,8 +9,6 @@ import traceback
 from xtquant import xtdata
 from xtquant import xtbson as bson
 
-_request_id = ''
-
 def datetime_to_timetag(timelabel, format = ''):
     '''
     timelabel: str '20221231' '20221231235959'
@@ -30,6 +28,17 @@ def timetag_to_datetime(timetag, format = ''):
     if not format:
         format = '%Y%m%d' if timetag % 86400000 == 57600000 else '%Y%m%d%H%M%S'
     return dt.datetime.fromtimestamp(timetag / 1000).strftime(format)
+
+def fetch_ContextInfo():
+    import sys
+    frame = sys._getframe()
+    while (frame):
+        loc = list(frame.f_locals.values())
+        for val in loc:
+            if type(val).__name__ == "ContextInfo":
+                return val
+        frame = frame.f_back
+    return None
 
 def subscribe_quote(stock_code, period, dividend_type, count = 0, result_type = '', callback = None):
     return xtdata.subscribe_quote(stock_code, period, '', '', count, callback)
@@ -264,8 +273,11 @@ def get_his_st_data(stock_code):
 
 
 def _passorder_impl(
-    optype, ordertype, accountid, ordercode
-    , prtype, modelprice, volume, ordertime, requestid
+    optype, ordertype, accountid
+    , ordercode, prtype, modelprice, volume
+    , strategyName, quickTrade, userOrderId
+    , barpos, bartime, func, algoName
+    , requestid
 ):
     data = {}
 
@@ -276,18 +288,39 @@ def _passorder_impl(
     data['prtype'] = prtype
     data['modelprice'] = modelprice
     data['volume'] = volume
-    data['ordertime'] = ordertime
+    data['strategyname'] = strategyName
+    data['remark'] = userOrderId
+    data['quicktrade'] = quickTrade
+    data['func'] = func
+    data['algoname'] = algoName
+    data['barpos'] = barpos
+    data['bartime'] = bartime
 
     client = xtdata.get_client()
     client.callFormula(requestid, 'passorder', bson.BSON.encode(data))
     return
 
-def passorder(opType, orderType, accountid, orderCode, prType, modelprice, volume, C):
-    return C.passorder(opType, orderType, accountid, orderCode, prType, modelprice, volume)
+
+def passorder(
+    opType, orderType, accountid
+    , orderCode, prType, modelprice, volume
+    , strategyName, quickTrade, userOrderId
+    , C
+):
+    return C.passorder(
+        opType, orderType, accountid
+        , orderCode, prType, modelprice, volume
+        , strategyName, quickTrade, userOrderId
+    )
+
 
 def get_trade_detail_data(accountid, accounttype, datatype, strategyname = ''):
-
     data = {}
+
+    C = fetch_ContextInfo()
+    if C is None:
+        raise Exception("contextinfo could not be found in the stack")
+    request_id = C.request_id
 
     data['accountid'] = accountid
     data['accounttype'] = accounttype
@@ -295,7 +328,7 @@ def get_trade_detail_data(accountid, accounttype, datatype, strategyname = ''):
     data['strategyname'] = strategyname
 
     client = xtdata.get_client()
-    result_bson = client.callFormula(_request_id, 'gettradedetail', bson.BSON.encode(data))
+    result_bson = client.callFormula(request_id, 'gettradedetail', bson.BSON.encode(data))
     result = bson.BSON.decode(result_bson)
 
     class DetailData(object):

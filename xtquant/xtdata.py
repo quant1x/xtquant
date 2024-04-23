@@ -255,6 +255,9 @@ def get_stock_list_in_sector(sector_name):
     :return: list
     '''
     client = get_client()
+    for illegalstr in ['\\', '/', ':', '*', '?', '"', '<', '>', '|']:
+        sector_name = sector_name.replace(illegalstr, '')
+
     return client.get_stock_list_in_sector(sector_name, 0)
 
 
@@ -349,7 +352,7 @@ def get_market_data_ori(
     , data_dir = ''
 ):
     client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
     global debug_mode
     return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v2', enable_read_from_local, enable_read_from_server, debug_mode, data_dir)
 
@@ -412,7 +415,7 @@ def get_market_data(
             field1, field2, ... : 数据字段
             value1, value2, ... : pd.DataFrame 字段对应的数据，各字段维度相同，index为stock_list，columns为time_list
     '''
-    if period in {'1m', '5m', '15m', '30m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
+    if period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
         import pandas as pd
         index, data = get_market_data_ori(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
@@ -431,7 +434,7 @@ def get_market_data_ex_ori(
     , data_dir = ''
 ):
     client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
     global debug_mode
     return client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v3', enable_read_from_local, enable_read_from_server, debug_mode, data_dir)
 
@@ -449,7 +452,7 @@ def get_market_data_ex(
     if isinstance(period, tuple):
         return _get_market_data_ex_tuple_period(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
-    if period in {'1m', '5m', '15m', '30m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
+    if period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
         return _get_market_data_ex_ori_221207(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data)
 
     import pandas as pd
@@ -506,7 +509,7 @@ def _get_market_data_ex_ori_221207(
     import numpy as np
     import pandas as pd
     client = get_client()
-    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
+    enable_read_from_local = period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', 'tick', '1w', '1mon', '1q', '1hy', '1y'}
     global debug_mode
     ret = client.get_market_data3(field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, 'v4', enable_read_from_local,
                                   enable_read_from_server, debug_mode, data_dir)
@@ -524,7 +527,7 @@ def _get_market_data_ex_221207(
     ifield = 'time'
     query_field_list = field_list if (not field_list) or (ifield in field_list) else [ifield] + field_list
 
-    if period in {'1m', '5m', '15m', '30m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
+    if period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
         ori_data = _get_market_data_ex_ori_221207(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, enable_read_from_server)
     else:
         ori_data = get_market_data_ex_ori(query_field_list, stock_list, period, start_time, end_time, count, dividend_type, fill_data, enable_read_from_server)
@@ -593,6 +596,9 @@ __TUPLE_PERIODS = {
     , 'brokerinfo' : (2038,86401000)
     , 'delistchangebond' : (4020, 86401000)
     , 'replacechangebond' : (4021, 86401000)
+    , 'optionhistorycontract' : (9502, 86400000)
+    , 'etfiopv1m' :(4011, 60000)
+    , 'etfiopv1d' :(4011, 86400000)
 }
 
 __STR_PERIODS = {
@@ -600,6 +606,7 @@ __STR_PERIODS = {
     , (3001,300000) : '5m'
     , (3001,900000) : '15m'
     , (3001,1800000) : '30m'
+    , (3001,3600000) : '60m'
     , (3001,3600000) : '1h'
     , (3001,86400000) : '1d'
 }
@@ -607,6 +614,7 @@ __STR_PERIODS = {
 def _needconvert_period(period):
     datas = {
         'snapshotindex' : 3004
+        , 'etfiopv' : 4011
     }
     return period in datas, datas.get(period, -1)
 
@@ -691,7 +699,7 @@ def get_local_data(field_list=[], stock_list=[], period='1d', start_time='', end
     if data_dir == None:
         data_dir = ''
 
-    if period in {'1m', '5m', '15m', '30m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
+    if period in {'1m', '5m', '15m', '30m', '60m', '1h', '1d', '1w', '1mon', '1q', '1hy', '1y'}:
         return _get_market_data_ex_ori_221207(field_list, stock_list, period, start_time, end_time, count,
                                               dividend_type, fill_data, False, data_dir)
 
@@ -1620,6 +1628,7 @@ def get_option_detail_data(optioncode):
         field_list = [
             'ExchangeID'
             , 'InstrumentID'
+            , 'InstrumentName'
             , 'ProductID'
             , 'OpenDate'
             , 'CreateDate'
@@ -1646,6 +1655,7 @@ def get_option_detail_data(optioncode):
             , 'MarginUnit'
             , 'OptUndlCode'
             , 'OptUndlMarket'
+            , 'OptUndlCodeFull'
             , 'OptExercisePrice'
             , 'NeeqExeType'
             , 'OptUndlRiskFreeRate'
@@ -1668,10 +1678,12 @@ def get_option_detail_data(optioncode):
         ret["optType"] = ""
 
         instrumentName = inst.get("InstrumentName")
-        if instrumentName.find('C') > 0 or instrumentName.find('购') > 0:
+        if inst.get('ExtendInfo').get('OptionType') == 0 or instrumentName.find('购') > 0:
             ret["optType"] = "CALL"
-        elif instrumentName.find('P') > 0 or instrumentName.find('沽') > 0:
+        elif inst.get('ExtendInfo').get('OptionType') == 1 or instrumentName.find('沽') > 0:
             ret["optType"] = "PUT"
+
+        ret['OptUndlCodeFull'] = ret['OptUndlCode'] + '.' + ret['OptUndlMarket']
     return ret
 
 
@@ -1766,6 +1778,58 @@ def get_option_list(undl_code, dedate, opttype = "", isavailavle = False):
         if inst['OptUndlCode'].find(undlCode) >= 0:
             result.append(opt)
     return result
+
+
+def get_his_option_list(undl_code, dedate):
+    '''
+        获取历史上某日的指定品种期权信息列表
+        :param undl_code: (str)标的代码，格式 stock.market e.g."000300.SH"
+        :param date: (str)日期 格式YYYYMMDD，e.g."20200427"
+        :return: dataframe
+        '''
+    split_codes = undl_code.rsplit('.', 1)
+    if len(split_codes) == 2:
+        stockcode = split_codes[0]
+        market = split_codes[1]
+
+    optmarket = market
+    optcode = stockcode
+
+    isstockopt = False
+
+    if market == 'SH':
+        if undl_code in ["000016.SH", "000300.SH", "000852.SH", "000905.SH"]:
+            optmarket = 'IF'
+        else:
+            optmarket = 'SHO'
+        optcode = 'XXXXXX'
+        isstockopt = True
+    if market == 'SZ':
+        optmarket = 'SZO'
+        optcode = 'XXXXXX'
+        isstockopt = True
+
+    code = optcode + '.' + optmarket
+
+    import datetime as dt
+    timetag = int(dt.datetime.strptime(dedate, '%Y%m%d').timestamp() * 1000)
+
+    data_all = get_market_data_ex([], [code], period='optionhistorycontract')[code]
+    if data_all.empty:
+        return None
+
+    data1 = data_all.loc[data_all['time'] >= timetag].reset_index()
+    if data1.empty:
+        return None
+
+    data_time = data1.loc[0]['time']
+
+    if isstockopt:
+        select = f'''time == {data_time} and 上市日 <= {dedate} and 到期日 >= {dedate} and 标的市场 == '{market}' and 标的编码 == '{stockcode}' '''
+    else:
+        select = f'''time == {data_time} and 上市日 <= {dedate} and 到期日 >= {dedate}  '''
+
+    return data_all.loc[data_all.eval(select)].reset_index().drop(['index', 'time'], axis=1)
 
 
 def get_ipo_info(start_time = '', end_time = ''):
@@ -1873,7 +1937,7 @@ def get_his_st_data(stock_code):
     return result
 
 
-def create_formula(formula_name, stock_code, period, start_time = '', end_time = '', count = -1, dividend_type = 'none', extend_param = {}, callback = None):
+def subscribe_formula(formula_name, stock_code, period, start_time = '', end_time = '', count = -1, dividend_type = 'none', extend_param = {}, callback = None):
     cl = get_client()
 
     result = bson.BSON.decode(cl.commonControl('createrequestid', bson.BSON.encode({})))
@@ -1893,7 +1957,7 @@ def create_formula(formula_name, stock_code, period, start_time = '', end_time =
     return request_id
 
 
-def subscribe_formula(request_id, callback = None):
+def bind_formula(request_id, callback = None):
     cl = get_client()
 
     if callback:
@@ -2001,6 +2065,18 @@ def reset_market_stock_list(market, datas):
 
 def push_custom_data(meta, datas, coverall = False):
     cl = get_client()
+    if period in ['1m', '5m', '15m', '30m', '60m', '1h', '2h', '3h', '4h', '1d']:
+        type = 3001
+
+    ans = []
+    fields = get_field_name(type)
+    for data in datas:
+        params = {}
+        for k, v in data.items():
+            if k in fields:
+                params[fields[k]] = v
+        ans.append(params)
+
     result = __bsoncall_common(
         cl.custom_data_control, 'pushcustomdata'
         , {
@@ -2332,8 +2408,8 @@ def watch_quote_server_status(callback):
     '''
     监控全局连接状态变化
 
-    def callback(info, status):
-        #info: info
+    def callback(info):
+        #info: {address : 'ip:port', status: ''}
         #status: 'connected', 'disconnected'
         return
     '''
@@ -2506,19 +2582,24 @@ def get_broker_queue_data(stock_list = [], start_time = '', end_time = '', count
     return ori_data
 
 
+xtquant_status_callback = None
+def status_callback(info):
+    if xtquant_status_callback:
+        xtquant_status_callback(info)
+
 def watch_xtquant_status(callback):
     '''
     监控xtquant连接状态变化
 
     def callback(info):
-        #info: {peerAddress : 'ip:port', status: ''}
+        #info: {address : 'ip:port', status: ''}
         #status: 'connected', 'disconnected'
         return
     '''
-    cl = get_client()
-
     if callback:
         callback = subscribe_callback_wrapper(callback)
 
-    cl.subscribeCommonControl("watchxtquantstatus", bson.BSON.encode({}), callback)
+    global xtquant_status_callback
+    xtquant_status_callback = callback
     return
+

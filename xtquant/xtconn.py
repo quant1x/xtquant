@@ -3,6 +3,7 @@
 import os
 import json
 from .xtdatacenter import try_create_client
+from . import xtbson as bson
 
 ### config
 localhost = '127.0.0.1'
@@ -22,6 +23,9 @@ def try_create_connection(addr):
 
     cl = try_create_client()
     cl.set_config_addr(addr)
+
+    from .xtdata import status_callback
+    cl.subscribeCommonControl("watchxtquantstatus", bson.BSON.encode({}), status_callback)
 
     ec, msg = cl.connect()
     if ec < 0:
