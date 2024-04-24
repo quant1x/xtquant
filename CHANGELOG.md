@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2024.3.31] - 2024-04-25
+### Changed
+- 升级依赖库版本.
+
 ## [2024.3.30] - 2024-04-23
 ### Changed
 - 升级依赖库版本.
@@ -104,7 +108,8 @@ All notable changes to this project will be documented in this file.
 - Add LICENSE.
 - Initial commit.
 
-[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.3.30...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant/compare/v2024.3.31...HEAD
+[2024.3.31]: https://gitee.com/quant1x/xtquant/compare/v2024.3.30...v2024.3.31
 [2024.3.30]: https://gitee.com/quant1x/xtquant/compare/v2024.3.29...v2024.3.30
 [2024.3.29]: https://gitee.com/quant1x/xtquant/compare/v2024.2.6...v2024.3.29
 [2024.2.6]: https://gitee.com/quant1x/xtquant/compare/v2024.2.5...v2024.2.6
