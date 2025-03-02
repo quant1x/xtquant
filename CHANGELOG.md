@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2024.5.0] - 2025-03-02
+## [2025.0.0] - 2025-03-02
 ### Changed
 - 更新xtquant版本到xtquant_241014
 xtdata.get_option_detail_data()期权多空方向类型判断调整
@@ -17,6 +17,7 @@ tick数据增加现手字段(tickvol)，即当前tick累计成交量与上条数
 新增函数xtdata.get_formula_result()，用于获取subscribe_formula()的模型结果
 
 修复token模式下启用K线全推后单支订阅数据周期错误的问题
+- update changelog
 
 ## [2024.4.3] - 2025-03-02
 ### Changed
@@ -175,8 +176,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2024.5.0...HEAD
-[2024.5.0]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.3...v2024.5.0
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.0...HEAD
+[2025.0.0]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.3...v2025.0.0
 [2024.4.3]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.2...v2024.4.3
 [2024.4.2]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.1...v2024.4.2
 [2024.4.1]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.0...v2024.4.1
