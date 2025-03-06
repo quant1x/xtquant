@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.0.2] - 2025-03-07
+### Changed
+- 修复pywin32版本为等于306,“~=”兼容模式打包异常
+
 ## [2025.0.1] - 2025-03-07
 ### Changed
 - 调整依赖库版本为兼容模式
+- update changelog
 
 ## [2025.0.0] - 2025-03-02
 ### Changed
@@ -181,7 +186,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.1...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.2...HEAD
+[2025.0.2]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.1...v2025.0.2
 [2025.0.1]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.0...v2025.0.1
 [2025.0.0]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.3...v2025.0.0
 [2024.4.3]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.2...v2024.4.3
