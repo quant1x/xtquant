@@ -2,7 +2,7 @@
 # coding=utf-8
 """The setup script."""
 import setuptools
-from base1x.version import project_version
+from q1x.base.version import project_version
 
 try:
     from setuptools import find_packages, setup
