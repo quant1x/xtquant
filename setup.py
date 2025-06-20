@@ -42,7 +42,7 @@ setuptools.setup(
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
-    keywords="quant1x xtquantlib",
+    keywords="quant1x xtquant",
     entry_points={
         # "console_scripts": [
         #     "quant1x-qmt=qmt.__main__:main",
