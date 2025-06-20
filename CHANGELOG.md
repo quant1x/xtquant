@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.0.3] - 2025-06-20
+### Changed
+- 升级quant1x-base版本到0.5.11
+
 ## [2025.0.2] - 2025-03-07
 ### Changed
 - 修复pywin32版本为等于306,“~=”兼容模式打包异常
+- update changelog
 
 ## [2025.0.1] - 2025-03-07
 ### Changed
@@ -186,7 +191,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.2...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.3...HEAD
+[2025.0.3]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.2...v2025.0.3
 [2025.0.2]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.1...v2025.0.2
 [2025.0.1]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.0...v2025.0.1
 [2025.0.0]: https://gitee.com/quant1x/xtquant.git/compare/v2024.4.3...v2025.0.0
