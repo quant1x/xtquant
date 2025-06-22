@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.0.7] - 2025-06-22
+### Changed
+- 调整quant1x-base版本到0.6.3
+
 ## [2025.0.6] - 2025-06-22
 ### Changed
 - 升级numpy和pandas到2.3.0
+- update changelog
 
 ## [2025.0.5] - 2025-06-20
 ### Changed
@@ -208,7 +213,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.6...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.7...HEAD
+[2025.0.7]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.6...v2025.0.7
 [2025.0.6]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.5...v2025.0.6
 [2025.0.5]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.4...v2025.0.5
 [2025.0.4]: https://gitee.com/quant1x/xtquant.git/compare/v2025.0.3...v2025.0.4
