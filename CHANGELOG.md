@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.5.21] - 2025-08-05
+### Changed
+- 更新依赖库版本
+
 ## [2025.5.20] - 2025-08-05
 ### Changed
 - 更新依赖库版本
+- update changelog
 
 ## [2025.5.19] - 2025-08-05
 ### Changed
@@ -237,7 +242,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.20...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.21...HEAD
+[2025.5.21]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.20...v2025.5.21
 [2025.5.20]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.19...v2025.5.20
 [2025.5.19]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.18...v2025.5.19
 [2025.5.18]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.17...v2025.5.18
