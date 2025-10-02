@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.5.24] - 2025-10-02
+### Changed
+- 去掉对quant1x-base的依赖
+
 ## [2025.5.23] - 2025-08-05
 ### Changed
 - 降级setuptools版本
+- update changelog
 
 ## [2025.5.22] - 2025-08-05
 ### Changed
@@ -252,7 +257,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.23...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.24...HEAD
+[2025.5.24]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.23...v2025.5.24
 [2025.5.23]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.22...v2025.5.23
 [2025.5.22]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.21...v2025.5.22
 [2025.5.21]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.20...v2025.5.21
