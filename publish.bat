@@ -1,12 +1,12 @@
 @echo off
-REM PyPi 模块 发布脚本
+REM PyPi 妯″潡 鍙戝竷鑴氭湰
 
-echo "正在打包..."
+echo "姝ｅ湪鎵撳寘..."
 python -m build
-echo "打包完成"
-echo "正在上传PyPi.org..."
+echo "鎵撳寘瀹屾垚"
+echo "姝ｅ湪涓婁紶PyPi.org..."
 twine upload dist/*
-echo "上传完成"
+echo "涓婁紶瀹屾垚"
 rmdir /S /Q dist
 rmdir /S /Q build
 rmdir /S /Q quant1x_xtquant.egg-info
