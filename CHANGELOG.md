@@ -3,9 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025.5.28] - 2026-06-07
+### Changed
+- 调整打包工具脚本
+
 ## [2025.5.27] - 2026-06-07
 ### Changed
 - refactor: setup.py 迁移至 pyproject.toml
+- update changelog
 
 ## [2025.5.26] - 2025-10-03
 ### Changed
@@ -272,7 +277,8 @@ Signed-off-by: 王布衣 <wangfengxy@sina.cn>
 - 增加.gitignore
 
 
-[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.27...HEAD
+[Unreleased]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.28...HEAD
+[2025.5.28]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.27...v2025.5.28
 [2025.5.27]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.26...v2025.5.27
 [2025.5.26]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.25...v2025.5.26
 [2025.5.25]: https://gitee.com/quant1x/xtquant.git/compare/v2025.5.24...v2025.5.25
